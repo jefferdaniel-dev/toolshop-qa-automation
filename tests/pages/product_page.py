@@ -1,6 +1,6 @@
 import re
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, Response
 
 from tests.pages.cart_page import CartPage
 
@@ -16,14 +16,19 @@ class ProductPage:
         self.unit_price.filter(has_text=re.compile(r"\d")).wait_for()
         return self.unit_price.inner_text()
 
-    def add_to_cart(self):
+    def add_to_cart(self) -> Response:
+        # POST /carts only creates the cart; the item is added by POST /carts/{id}.
         with self.page.expect_response(
-            lambda r: r.url.endswith("/carts")
+            lambda r: re.search(r"/carts/[^/?]+$", r.url) is not None
             and r.request.method == "POST"
-            and r.status == 201
-        ):
+        ) as response_info:
             self.add_to_cart_button.click()
+        return response_info.value
 
-    def open_cart(self) -> CartPage:
-        self.cart_link.click()
-        return CartPage(self.page)
+    def open_cart(self) -> tuple[CartPage, Response]:
+        with self.page.expect_response(
+            lambda r: re.search(r"/carts/[^/?]+$", r.url) is not None
+            and r.request.method == "GET"
+        ) as response_info:
+            self.cart_link.click()
+        return CartPage(self.page), response_info.value

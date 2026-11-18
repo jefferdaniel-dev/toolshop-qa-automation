@@ -9,6 +9,7 @@ __pycache__/
 test-results/
 playwright-report/
 reports/
+evidencias/
 node_modules/
 .next/
 .claude/settings.local.json

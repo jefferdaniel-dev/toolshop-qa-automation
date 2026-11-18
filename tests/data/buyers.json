@@ -1,32 +1,7 @@
 [
-  {
-    "first_name": "Laura",
-    "last_name": "Pruebas",
-    "email": "laura.pruebas@example.com",
-    "address": {"country": "CO", "postal_code": "110111", "house_number": "45", "street": "Calle Ficticia 12"}
-  },
-  {
-    "first_name": "Mateo",
-    "last_name": "Ensayo",
-    "email": "mateo.ensayo@example.com",
-    "address": {"country": "CO", "postal_code": "050021", "house_number": "18", "street": "Carrera Inventada 7"}
-  },
-  {
-    "first_name": "Sofia",
-    "last_name": "Simulada",
-    "email": "sofia.simulada@example.com",
-    "address": {"country": "CO", "postal_code": "760001", "house_number": "9", "street": "Avenida Imaginaria 30"}
-  },
-  {
-    "first_name": "John",
-    "last_name": "Sample",
-    "email": "john.sample@example.com",
-    "address": {"country": "US", "postal_code": "73301", "house_number": "100", "street": "Fictional Avenue"}
-  },
-  {
-    "first_name": "Emily",
-    "last_name": "Placeholder",
-    "email": "emily.placeholder@example.com",
-    "address": {"country": "US", "postal_code": "97201", "house_number": "742", "street": "Mock Street"}
-  }
+  {"first_name": "Laura", "last_name": "Pruebas", "email": "laura.pruebas@example.com"},
+  {"first_name": "Mateo", "last_name": "Ensayo", "email": "mateo.ensayo@example.com"},
+  {"first_name": "Sofia", "last_name": "Simulada", "email": "sofia.simulada@example.com"},
+  {"first_name": "John", "last_name": "Sample", "email": "john.sample@example.com"},
+  {"first_name": "Emily", "last_name": "Placeholder", "email": "emily.placeholder@example.com"}
 ]

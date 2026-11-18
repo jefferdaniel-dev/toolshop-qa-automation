@@ -1,4 +1,6 @@
-from playwright.sync_api import Page
+from playwright.sync_api import Page, Response
+
+from tests.pages.login_page import LoginPage
 
 
 class CheckoutPage:
@@ -10,10 +12,14 @@ class CheckoutPage:
         self.guest_last_name = page.get_by_test_id("guest-last-name")
         self.guest_submit = page.get_by_test_id("guest-submit")
         self.proceed_as_guest_button = page.get_by_test_id("proceed-2-guest")
+        self.login = LoginPage(page)
+        self.proceed_as_user_button = page.get_by_test_id("proceed-2")
         self.country = page.get_by_test_id("country")
         self.postal_code = page.get_by_test_id("postal_code")
         self.house_number = page.get_by_test_id("house_number")
         self.street = page.get_by_test_id("street")
+        self.city = page.get_by_test_id("city")
+        self.state = page.get_by_test_id("state")
         self.proceed_to_payment_button = page.get_by_test_id("proceed-3")
         self.payment_method = page.get_by_test_id("payment-method")
         self.card_number = page.get_by_test_id("credit_card_number")
@@ -24,16 +30,25 @@ class CheckoutPage:
         self.payment_success_message = page.get_by_test_id("payment-success-message")
         self.order_confirmation = page.get_by_text("Thanks for your order")
 
-    def continue_as_guest(self, email: str, first_name: str, last_name: str):
+    def fill_guest(self, email: str, first_name: str, last_name: str):
         self.guest_tab.click()
         self.guest_email.fill(email)
         self.guest_first_name.fill(first_name)
         self.guest_last_name.fill(last_name)
+
+    def submit_guest(self):
         self.guest_submit.click()
         self.proceed_as_guest_button.click()
+        self.invoice_path = "/invoices/guest"
 
-    def fill_address(self, address: dict):
-        self.country.select_option(address["country"])
+    def proceed_as_user(self):
+        self.proceed_as_user_button.click()
+        self.invoice_path = "/invoices"
+
+    def fill_address(
+        self, country: str, postal_code: str, house_number: str, street: str
+    ) -> Response:
+        self.country.select_option(country)
         # City and state are not typed: the API answers 422 when they differ from
         # the postcode lookup. Street is typed after every lookup response because
         # each response overwrites it.
@@ -46,8 +61,8 @@ class CheckoutPage:
         self.page.on("request", collect)
         try:
             with self.page.expect_response(lambda r: "/postcode-lookup" in r.url):
-                self.postal_code.fill(address["postal_code"])
-                self.house_number.fill(address["house_number"])
+                self.postal_code.fill(postal_code)
+                self.house_number.fill(house_number)
         finally:
             self.page.remove_listener("request", collect)
         for request in lookups:
@@ -55,26 +70,31 @@ class CheckoutPage:
             if response is None:
                 raise RuntimeError("postcode lookup request failed")
             response.finished()
-        self.street.fill(address["street"])
+        self.street.fill(street)
+        return lookups[-1].response()
+
+    def proceed_to_payment(self):
         self.proceed_to_payment_button.click()
 
-    def pay_with_card(self, card: dict, holder_name: str):
+    def fill_card(self, card: dict, holder_name: str):
         self.payment_method.select_option("credit-card")
         self.card_number.fill(card["number"])
         self.expiration_date.fill(card["expiration"])
         self.cvv.fill(card["cvv"])
         self.card_holder_name.fill(holder_name)
+
+    def submit_payment(self) -> Response:
         with self.page.expect_response(
             lambda r: r.url.endswith("/payment/check")
             and r.request.method == "POST"
-            and r.status == 200
-        ):
+        ) as response_info:
             self.finish_button.click()
+        return response_info.value
 
-    def confirm_order(self):
+    def confirm_order(self) -> Response:
         with self.page.expect_response(
-            lambda r: r.url.endswith("/invoices/guest")
+            lambda r: r.url.endswith(self.invoice_path)
             and r.request.method == "POST"
-            and r.status == 201
-        ):
+        ) as response_info:
             self.finish_button.click()
+        return response_info.value

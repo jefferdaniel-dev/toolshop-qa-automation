@@ -1,5 +1,6 @@
-from playwright.sync_api import Page
+from playwright.sync_api import Page, Response
 
+from tests.pages.login_page import LoginPage
 from tests.pages.search_results_page import SearchResultsPage
 
 
@@ -9,18 +10,25 @@ class HomePage:
         self.product_names = page.get_by_test_id("product-name")
         self.search_input = page.get_by_test_id("search-query")
         self.search_button = page.get_by_test_id("search-submit")
+        self.sign_in_link = page.get_by_test_id("nav-sign-in")
 
-    def open(self):
+    def open(self) -> Response:
         with self.page.expect_response(
-            lambda r: (r.url.endswith("/products") or "/products?" in r.url)
-            and r.status == 200
-        ):
+            lambda r: r.url.endswith("/products") or "/products?" in r.url
+        ) as response_info:
             self.page.goto("/")
+        return response_info.value
 
-    def search(self, term: str) -> SearchResultsPage:
+    def type_search(self, term: str):
         self.search_input.fill(term)
+
+    def submit_search(self) -> tuple[SearchResultsPage, Response]:
         with self.page.expect_response(
-            lambda r: "/products/search" in r.url and r.status == 200
-        ):
+            lambda r: "/products/search" in r.url
+        ) as response_info:
             self.search_button.click()
-        return SearchResultsPage(self.page)
+        return SearchResultsPage(self.page), response_info.value
+
+    def open_login(self) -> LoginPage:
+        self.sign_in_link.click()
+        return LoginPage(self.page)

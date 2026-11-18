@@ -3,12 +3,14 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
+**Siguiente: T10.** Orden acordado con el usuario (2026-11-18): T11 → T12 → T13 → T10 → T5 → T6.
+
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
 
 | Id | Qué | Responsable | Se necesita en | Estado |
 |---|---|---|---|---|
-| P1 | `.env` con `BASE_URL=https://practicesoftwaretesting.com` (ver D12) | usuario | Fase 1 | `pending` |
+| P1 | `.env` con `BASE_URL=https://practicesoftwaretesting.com` (ver D12) y `TEST_USER_EMAIL`/`TEST_USER_PASSWORD` | usuario | Fase 1 | `done` |
 | P2 | Python (se usa el 3.15 instalado, ver D7) + Chromium de Playwright | — | Fase 1 | `done` |
 | P3 | Repo en GitHub (público, para minutos ilimitados de Actions) | agente con `gh`, previa confirmación | Fase 2 | `pending` |
 | P4 | Cuenta Supabase + conector Supabase en Claude | usuario | Fase 3 | `pending` |
@@ -58,12 +60,60 @@ Criterio de aceptación:
 - Sin carrito ni checkout. Excluido por defecto; solo corre a demanda (`-m smoke_reuse` o equivalente).
 - `REUSE_URL` documentada en `.env.example` sin valor.
 
-## Dudas para el usuario (2026-11-18)
-1. Las tarjetas de PlacetoPay salen de una página de un integrador (docs.y.uno), no de la documentación oficial. ¿Las confirmas o tienes la lista oficial?
-2. Toolshop aprueba cualquier tarjeta con formato válido, así que no se pueden probar rechazos. ¿Hace falta cubrir rechazos (mock de la API) o basta con el camino feliz?
-3. Toolshop calcula la ciudad y el estado a partir del código postal (a veces con valores de relleno). Los compradores no traen ciudad ni estado. ¿Está bien así?
-4. `recordings/raw_full_flow.py` y `recordings/T4.py` (con login) ya no se usan. ¿Se conservan o se borran? No están en git.
-5. T2–T4 no están en ningún commit.
+### T7 · Evidencias por módulo — `done`
+Criterio de aceptación:
+- Cada escenario (home, @search, @cart, @checkout) guarda capturas según D21: carpeta del día, subcarpeta `<producto>_<fecha-hora>` (o `home_<fecha-hora>` si no hay producto) y archivos `NN-<modulo>-<fecha-hora>.png` numerados en el orden del flujo.
+- Módulos mínimos: home, busqueda (con el término escrito, antes de buscar), resultados, producto, carrito, invitado (formulario lleno, antes de enviar), direccion (llena, antes de continuar), pago (llena, antes de pagar), pago-exitoso, factura.
+- `evidencias/` en `.gitignore`. Sin capturas dentro de los Page Objects con aserciones; los POM separan llenar y enviar donde haga falta.
+
+### T8 · Direcciones reales en Ejemplos — `done` (cerrada por el usuario; observaciones de calidad pasan a T10)
+Criterio de aceptación:
+- El Esquema @checkout recibe la dirección desde `Ejemplos` (columnas país, código postal, número, calle) con al menos 5 direcciones reales verificadas: Carrera 6 15-88, 110321 (CO, Museo del Oro); 350 5th Avenue, 10118 (US, Empire State); 1600 Amphitheatre Parkway, 94043 (US, Googleplex); Museumstraat 1, 1071XX (NL, Rijksmuseum); Platz der Republik 1, 11011 (DE, Reichstag; reemplaza a GB por D22).
+- La prueba escribe la calle real y verifica que ciudad y estado del formulario coincidan con la respuesta de `/postcode-lookup` (D19). `buyers.json` deja de traer dirección.
+
+### T9 · Comprador invitado o registrado — `done`
+Criterio de aceptación:
+- Columna `tipo_comprador` (`invitado` | `registrado`) en los `Ejemplos` de @checkout, con al menos una fila de cada tipo.
+- Registrado: login con `TEST_USER_EMAIL`/`TEST_USER_PASSWORD`; ambas documentadas sin valor en `.env.example`. Evidencia `login` con el formulario lleno, antes de entrar.
+- Credenciales nunca impresas ni en capturas (la captura de login enmascara la contraseña o la omite).
+
+### T10 · Refactor de verificación de status y steps — `pending`
+Origen: observaciones de KAKASHI y FURY al cierre de T8 y T9. Sin cambio de comportamiento; la suite sigue pasando igual.
+Criterio de aceptación:
+- Un solo helper de verificación de status reemplaza los asserts repetidos: guarda el status en una variable antes de comparar y el mensaje dice método y ruta, sin host ni query (pytest no debe imprimir la URL completa de la Response).
+- Un único Given para abrir la tienda, compartido por `home.feature` y `purchase.feature`.
+- Las esperas de `HomePage.open`, `HomePage.submit_search` y `CheckoutPage.fill_address` filtran por método HTTP y ruta exacta.
+- El When "busca" solo actúa; la verificación de resultados queda solo en el Then.
+- `CheckoutPage.invoice_path` declarado en `__init__` (observación de KAKASHI en T9).
+- Evaluar separar el step de comprador invitado/registrado en dos (observación de KAKASHI en T9).
+- Helper `open_store(page)` para no repetir abrir la home + status en `store_with_products` y en `login_home` (KAKASHI en T11).
+- En `continue_checkout`, la segunda espera de `street` es redundante con `login_home`; confirmar con una sonda si `proceed-2` dispara otro `GET /users/me` con el perfil ya cargado y esperar ese efecto concreto (JUEZ en T11).
+- `pytest.ini` con `addopts = --tb=short`; nunca `--tb=long`, `--showlocals` ni tracing en corridas con credenciales (FURY en T9: exponen la contraseña).
+
+### T11 · Columna `acceso`: invitado, login en checkout o login en home — `done`
+Pedido del usuario (2026-11-18). Reemplaza la columna `tipo_comprador` de T9. Login en home según `recordings/raw_full_flow.py` (`nav-sign-in` → email, password, `login-submit`).
+Criterio de aceptación:
+- Columna `acceso` en los `Ejemplos` de @checkout. Valores:
+  - `invitado` o celda vacía: compra como invitado;
+  - `login_checkout`: inicia sesión en el paso de login del checkout (comportamiento actual de `registrado`);
+  - `login_home`: inicia sesión desde la home antes de buscar y en el checkout continúa ya autenticado.
+  Al menos una fila de cada valor (una con celda vacía).
+- Un valor desconocido falla con un mensaje claro.
+- Evidencia `login` en ambos casos de login, formulario lleno antes de entrar; credenciales nunca impresas ni en capturas (D23).
+
+### T12 · Comandos cortos con navegador visible + README — `done`
+Pedido del usuario (2026-11-18): correr con `npm run toolshop:<algo>`.
+Criterio de aceptación:
+- `package.json` (sin dependencias) con scripts: `toolshop:all`, `toolshop:search`, `toolshop:cart`, `toolshop:checkout`, `toolshop:invitado`, `toolshop:login`. Todos con `--headed` y usando el Python de `.venv`.
+- `--headed` solo en los scripts, no en `pytest.ini` (CI corre sin pantalla).
+- `README.md` corto: qué es, requisitos, instalación, `.env` desde `.env.example`, tabla de comandos, dónde quedan las evidencias, y cómo seguir el trabajo (`brain/` + `/hiruzen`).
+
+### T13 · ID de factura en la carpeta de evidencias — `done`
+Pedido del usuario (2026-11-18).
+Criterio de aceptación:
+- Al confirmar una compra, la carpeta del escenario se renombra agregando el número de factura al final: `<producto>_<fecha-hora>_INV-…`.
+- Si la compra no llega a factura, la carpeta queda con el nombre original.
+- Actualizar D21.
 
 ## Fases siguientes (se detallan al cerrar la anterior)
 - Fase 2: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto.

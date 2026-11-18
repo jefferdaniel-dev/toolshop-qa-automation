@@ -78,3 +78,46 @@
 - Suite: 10 escenarios (1 home + 3 @search + 3 @cart + 3 @checkout), en verde en headless y headed.
 - Las sondas y corridas crearon facturas de invitado con datos sintéticos en Toolshop (sitio de práctica).
 - Instrucción de FURY alineada con D14 (`.claude/agents/fury.md`).
+
+## 2026-11-18 · Respuestas del usuario y nuevo alcance
+- Commit 16fa6ed (T2–T4). Tarjetas confirmadas (docs.placetopay.dev); basta el camino feliz.
+- Investigación de direcciones: la API de lookup inventa los datos con Faker y la de facturas rechaza ciudades reales con 422 (D19). El usuario eligió direcciones reales + validación del autocompletado.
+- Nuevas tareas: T7 evidencias (D21), T8 direcciones reales (D19), T9 invitado o registrado (D20, bloqueada hasta que el usuario agregue credenciales al `.env`).
+- Usuario agregó TEST_USER_EMAIL/TEST_USER_PASSWORD al .env (no verificado por agentes: .env bloqueado). T9 desbloqueada.
+
+## 2026-11-18 · T7 done (intento 1)
+- PICCOLO (opus): fixture `evidence` en conftest (carpeta por día y escenario, numeración NN), capturas en los steps, POM con llenar y enviar separados (type_search/submit_search, fill_guest/submit_guest, fill_address/proceed_to_payment, fill_card/submit_payment); `evidencias/` en .gitignore. Rojo evidenciado (fixture inexistente).
+- ROCK LEE (10/10 ×2, árbol 01–10 correcto), SHIKAMARU, FURY (sin path traversal), KAKASHI: PASS. El orquestador revisó 02-busqueda y 10-factura: correctas.
+- Observaciones: el producto se obtiene con `_pytest_bdd_example` (interno de pytest-bdd, fijado en 9.0.1); si se renombra la columna "producto", la carpeta pasa a "home" sin avisar; el aviso "Product added" aparece en capturas posteriores.
+
+## 2026-11-18 · T8 intento 1
+- PICCOLO: Ejemplos @checkout con dirección real (país, código postal, número, calle); `fill_address` devuelve el JSON del lookup; step Entonces verifica ciudad y estado contra el lookup; buyers.json sin dirección. 4/5 filas pasan; GB falla porque el lookup devuelve el estado vacío y el formulario lo exige (D22). El orquestador decide reemplazar GB por DE 11011 (lookup con estado, verificado con curl).
+- Fila GB reemplazada por DE. Validadores: SHIKAMARU, KAKASHI, FURY PASS. ROCK LEE FAIL: corrida 1 con 2 fallos (escenarios US de @checkout, `nav-cart` click con timeout de 30 s en product_page.py:28; corrida lenta, 132 s); corrida 2 12/12; `-m checkout` 5/5. Hipótesis del orquestador: el aviso "Product added to shopping cart" tapa el ícono del carrito.
+- JUEZ (con las evidencias de T7): CULPA ENTORNO con una debilidad de la PRUEBA. La API falló en una ventana de 65 s. Thor US falló en `confirm_order` (no en nav-cart; su captura 09 muestra el pago exitoso). Combination US falló porque `add_to_cart` espera `POST /carts` (crea el carrito) y no `POST /carts/{id}` (agrega el ítem; confirmado en la sonda del orquestador: 201 y luego 200). Además, filtrar el status dentro de `expect_response` convierte un 4xx/5xx en un "Timeout" engañoso. Reintento 1: esperar `POST /carts/{id}` y verificar los status fuera del predicado.
+- Reintento 1: `add_to_cart` espera `POST /carts/{id}` (secuencia confirmada: POST 201 /carts y luego POST 200 /carts/{id}; con carrito existente: GET y luego POST /carts/{id}); los POM devuelven la Response y los steps verifican el status con un mensaje claro. Corridas: 12, 12, 11+1F, 12. El fallo: carrito vacío en @cart Combination (to_have_count(1) → 0) pese a POST 200. Sitio lento (70–160 s). Reintento 2: `open_cart` espera `GET /carts/{id}` y verifica el status.
+- Reintento 2: `open_cart` espera `GET /carts/{id}` y verifica el status. ROCK LEE: PASS (12/12 ×2, checkout 5/5; sitio lento, 2,5–3 min por corrida). SHIKAMARU: PASS. KAKASHI: FAIL de calidad (7 asserts de status repetidos → helper; Given duplicado en test_home y test_purchase; filtros de open, search y lookup sin método HTTP; el When "busca" verifica). FURY: FAIL bajo (`assert response.status == N` hace que pytest imprima la URL completa con el host y el código postal de la query; corrección: pasar el status a una variable antes del assert).
+- T8 queda `blocked` por alcanzar el máximo de reintentos. Funcionalmente está en verde. Propuesta al usuario: cerrar T8 y crear T10 de refactor (helper `expect_status` sin host, Given único, filtros con método).
+
+## 2026-11-18 · T8 done por decisión del usuario
+- El usuario cerró T8 (funcional en verde: 12/12 ×2, checkout 5/5). Las observaciones de KAKASHI y FURY pasan a T10 (refactor de verificación de status y steps). Siguiente: T9.
+
+## 2026-11-18 · T9 done
+- PICCOLO: columna `tipo_comprador` (3 invitado, 2 registrado: Thor US y Drill DE); step `continúa la compra como comprador "<tipo>"`; `CheckoutPage.fill_login`/`submit_login`; `confirm_order` espera `/invoices` o `/invoices/guest`; `required_env` falla con el nombre de la variable, sin valor; `.env.example` con `TEST_USER_EMAIL`/`TEST_USER_PASSWORD`. Rojo: StepDefinitionNotFoundError. Verde: checkout 5/5 ×2, suite 12/12. Hallazgo: la precarga del perfil borra la dirección escrita (D23).
+- Validadores: ROCK LEE PASS (checkout 5/5, suite 12/12, capturas `06-login-*.png`, sin credenciales en la salida). SHIKAMARU PASS. FURY PASS (riesgo latente con `--tb=long`/`--showlocals`/tracing → T10). KAKASHI FAIL: `invoice_path` fuera de `__init__`, espera por `street` en vez de API, step que ramifica, y observaciones de T8.
+- JUEZ: sin culpa, no hay reintento. La espera por API ya se probó y falla; los puntos de T8 no aplican; `invoice_path` y la separación del step pasan a T10. El orquestador corrió @checkout 3 veces más: 5/5 ×3.
+
+## 2026-11-18 · T11 done
+- Pedido del usuario: bandera de acceso en Ejemplos (invitado/vacío, login en checkout, login en home), comandos cortos con navegador visible (T12) e ID de factura en la carpeta (T13). Se crearon T11–T13 y la línea "Siguiente:" en tasks.md; `/hiruzen` ahora la respeta.
+- PICCOLO: columna `acceso`; Given `que el usuario usa el acceso "<acceso>"` (parsers.re por la celda vacía); `LoginPage` nuevo, compartido por home y checkout; `HomePage.open_login`; `CheckoutPage.proceed_as_user`. Rojo: StepDefinitionNotFoundError. Verde: checkout 5/5 ×2 + 3 corridas con registro de red, suite 12/12. Corrigió una carrera de `setAddress()` con `login_home` (falló 3 de 5 antes del arreglo; D23). Un 500 aislado en `/users/login` durante una sonda (entorno).
+- Validadores: ROCK LEE PASS (5/5 ×2, 12/12, `01-login` en login_home y `06-login` en login_checkout). SHIKAMARU PASS. FURY PASS. KAKASHI FAIL: 3 líneas duplicadas para abrir la home.
+- JUEZ: sin culpa que amerite reintento; la duplicación y una espera redundante pasan a T10. Siguiente: T12.
+
+## 2026-11-18 · T12 done
+- PICCOLO: `package.json` con 6 scripts `toolshop:*` (`--headed`, Python de `.venv`); `README.md`; Ejemplos de @checkout partidos en bloques `@invitado` y `@login` (markers en pytest.ini). D24.
+- Validadores: ROCK LEE PASS (`toolshop:all` 12/12, `login` 3/3, `invitado` 2/2 con la celda vacía, `-- -k "Thor"` 2 seleccionados; todo headed). KAKASHI PASS. FURY PASS. SHIKAMARU FAIL: el README decía que el smoke de reuse.cl existe; el orquestador corrigió esa frase (planeado, T6) sin reintento por ser de una línea.
+
+## 2026-11-18 · T13 done
+- PICCOLO: `Evidence.append_to_folder(suffix)` (sanea y renombra la carpeta); el step de factura lee `INV-\d+` del texto de confirmación y renombra tras la captura `factura`. Rojo: AttributeError. Verde: checkout 5/5, suite 12/12.
+- Validadores: ROCK LEE PASS (5/5 y 12/12; las 5 carpetas de checkout con `_INV-<n>` y 10 capturas; home/search/cart sin sufijo). FURY PASS (saneamiento cierra path traversal; el rename no sale de `evidencias/<fecha>/`). SHIKAMARU y KAKASHI FAIL: D21 sin actualizar, regex duplicada, assert que probaba el propio helper.
+- El orquestador aplicó las correcciones sin reintento por ser menores: D21 actualizada, constante `INVOICE_NUMBER`, assert redundante quitado; se mantuvo el saneamiento (defensa barata ante texto de la UI). Suite tras el cambio: 12/12. El caso "sin factura conserva el nombre" se cumple por construcción (el rename solo ocurre en el step de factura); no tiene prueba propia.
+- Siguiente: T10.

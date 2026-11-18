@@ -1,0 +1,13 @@
+{
+  "name": "reuse-qa",
+  "private": true,
+  "description": "Automatización QA de ecommerce (Toolshop) con pytest-bdd y Playwright",
+  "scripts": {
+    "toolshop:all": ".venv\\Scripts\\python -m pytest --headed",
+    "toolshop:search": ".venv\\Scripts\\python -m pytest -m search --headed",
+    "toolshop:cart": ".venv\\Scripts\\python -m pytest -m cart --headed",
+    "toolshop:checkout": ".venv\\Scripts\\python -m pytest -m checkout --headed",
+    "toolshop:invitado": ".venv\\Scripts\\python -m pytest -m invitado --headed",
+    "toolshop:login": ".venv\\Scripts\\python -m pytest -m login --headed"
+  }
+}
