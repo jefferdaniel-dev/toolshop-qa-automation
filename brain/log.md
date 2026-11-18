@@ -121,3 +121,9 @@
 - Validadores: ROCK LEE PASS (5/5 y 12/12; las 5 carpetas de checkout con `_INV-<n>` y 10 capturas; home/search/cart sin sufijo). FURY PASS (saneamiento cierra path traversal; el rename no sale de `evidencias/<fecha>/`). SHIKAMARU y KAKASHI FAIL: D21 sin actualizar, regex duplicada, assert que probaba el propio helper.
 - El orquestador aplicó las correcciones sin reintento por ser menores: D21 actualizada, constante `INVOICE_NUMBER`, assert redundante quitado; se mantuvo el saneamiento (defensa barata ante texto de la UI). Suite tras el cambio: 12/12. El caso "sin factura conserva el nombre" se cumple por construcción (el rename solo ocurre en el step de factura); no tiene prueba propia.
 - Siguiente: T10.
+
+## 2026-11-18 · Repo en GitHub, hook de protección y README de portafolio
+- Commit `bb213d6` (T7–T13) y repo público `jefferdaniel-dev/toolshop-qa-automation` creado con `gh repo create --push` a pedido del usuario. Hallazgo: ese push pasó pese a `deny Bash(git push:*)`, porque las reglas solo miran el inicio del comando. P3 done.
+- Pedido del usuario: push siempre con pregunta y hooks para que no se salten reglas. `settings.json`: push/commit/gh de publicación en `ask`. Hook `guard.py` (D25). Pruebas: 64 casos de comandos y 6 de commit en repo temporal, todos correctos; el hook bloqueó en vivo `pytest --showlocals`.
+- FURY ronda 1: FAIL (falso positivo de `-l` con pipes, `git commit -am` sin revisar, variantes de borrado recursivo) más mejoras; todas aplicadas. Ronda 2: PASS; su único hallazgo nuevo (`PYTEST_ADDOPTS=-l` no se bloqueaba) se corrigió. 67/67 casos.
+- `CLAUDE.md`: regla de Git actualizada. README reescrito para portafolio, sin mencionar el smoke de reuse.cl (pedido del usuario).

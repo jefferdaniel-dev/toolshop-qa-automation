@@ -29,10 +29,39 @@
       "Bash(Get-Content .env:*)",
       "Bash(printenv:*)",
       "Bash(env)",
-      "Bash(git push:*)",
+      "Bash(git push --force:*)",
       "Bash(git reset --hard:*)",
       "Bash(rm -rf:*)",
       "Bash(Remove-Item -Recurse:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "PowerShell(git push:*)",
+      "Bash(git commit:*)",
+      "PowerShell(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh release:*)",
+      "PowerShell(gh repo:*)",
+      "PowerShell(gh pr create:*)",
+      "PowerShell(gh pr merge:*)",
+      "PowerShell(gh release:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Read|Grep|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py -3.15 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\"",
+            "timeout": 30,
+            "statusMessage": "Revisando reglas de seguridad"
+          }
+        ]
+      }
     ]
   }
 }

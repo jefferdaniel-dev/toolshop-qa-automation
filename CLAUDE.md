@@ -48,4 +48,5 @@ Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futur
 - Si la premisa de la tarea es falsa, decirlo y detenerse.
 
 ## Git
-- Nunca `git push` ni reescribir historia. Commits solo cuando el usuario lo pida.
+- Commits, push y cualquier publicación en GitHub (`gh repo/pr/release`) solo cuando el usuario lo pida; `settings.json` y el hook `.claude/hooks/guard.py` siempre piden su aprobación.
+- Nunca reescribir historia ni forzar push (el hook lo bloquea).

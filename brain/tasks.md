@@ -12,7 +12,7 @@ Cada herramienta se instala justo antes de la fase que la usa.
 |---|---|---|---|---|
 | P1 | `.env` con `BASE_URL=https://practicesoftwaretesting.com` (ver D12) y `TEST_USER_EMAIL`/`TEST_USER_PASSWORD` | usuario | Fase 1 | `done` |
 | P2 | Python (se usa el 3.15 instalado, ver D7) + Chromium de Playwright | — | Fase 1 | `done` |
-| P3 | Repo en GitHub (público, para minutos ilimitados de Actions) | agente con `gh`, previa confirmación | Fase 2 | `pending` |
+| P3 | Repo en GitHub (público): https://github.com/jefferdaniel-dev/toolshop-qa-automation | agente con `gh`, previa confirmación | Fase 2 | `done` |
 | P4 | Cuenta Supabase + conector Supabase en Claude | usuario | Fase 3 | `pending` |
 | P5 | Cuenta Vercel/v0 + conectores Vercel y v0 en Claude | usuario | Fase 4 | `pending` |
 | P6 | Docker Desktop (requiere admin y WSL2) | usuario | Fase 5 | `pending` |
