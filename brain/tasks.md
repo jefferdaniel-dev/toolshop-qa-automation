@@ -20,7 +20,7 @@ Ya disponible: Git, Node/npm, GitHub CLI con sesión iniciada (scopes `repo`, `w
 ## Fase 1 — MVP tests (local)
 
 Sitio principal: Toolshop (`BASE_URL`). Smoke secundario: reuse.cl (`REUSE_URL`), ver D12.
-Las tareas T2–T4 y T6 parten de una grabación de codegen del usuario en `recordings/<id>.py` (ver D8).
+Las tareas T2–T4 y T6 parten de una grabación de codegen del usuario en `recordings/<id>.py` (ver D8). Grabaciones T2, T3 y T4 listas (T4 grabó login; se reemplaza por compra como invitado, D14).
 
 ### T1 · Entorno de pruebas base — `done`
 Criterio de aceptación:
@@ -28,21 +28,24 @@ Criterio de aceptación:
 - `tests/conftest.py` toma la URL base de la variable de entorno `BASE_URL`.
 - Escenario `tests/features/home.feature`: "el usuario abre la tienda y ve la página principal" pasa con `python -m pytest`.
 
-### T2 · Buscar producto — `pending`
+### T2 · Buscar producto (data-driven) — `done`
 Criterio de aceptación:
-- Escenario: buscar un producto por nombre muestra resultados que contienen ese nombre.
-- Page objects `HomePage` y `SearchResultsPage` en `tests/pages/`.
+- `tests/features/purchase.feature` con un `Esquema del escenario` tag `@search`: buscar `<producto>` muestra resultados y todos contienen ese nombre. `Ejemplos` con al menos 3 productos (p. ej. Thor Hammer, Combination Pliers, Cordless Drill 12V).
+- Page Objects `HomePage` (búsqueda) y `SearchResultsPage` en `tests/pages/`.
+- `pytest.ini` registra el marker `search`; `pytest -m search` corre solo estos escenarios.
+- Esperas por estado (ver log "Grabaciones T2–T4 limpias"): la home con productos antes de buscar y el caption de búsqueda antes de verificar resultados.
 
-### T3 · Agregar producto al carrito — `pending`
+### T3 · Agregar producto al carrito — `done`
 Criterio de aceptación:
-- Escenario: desde los resultados, abrir un producto y agregarlo; el carrito muestra el producto y cantidad 1.
-- Page objects `ProductPage` y `CartPage`.
+- En `purchase.feature`, `Esquema del escenario` tag `@cart` con los mismos `Ejemplos`: abrir `<producto>` desde los resultados, agregarlo y ver en el carrito el nombre, cantidad 1 y el mismo precio mostrado en el detalle.
+- Page Objects `ProductPage` y `CartPage`. Marker `cart` registrado.
 
-### T4 · Diligenciar checkout hasta el paso de pago — `pending`
+### T4 · Checkout completo con comprador y tarjeta aleatorios — `done`
 Criterio de aceptación:
-- Escenario: desde el carrito avanzar por el checkout, identificarse (cuenta de prueba desde variables de entorno o invitado, según ofrezca el sitio), llenar la dirección de facturación y llegar al paso de pago con el producto en el resumen.
-- No se confirma el pedido.
-- Datos de dirección ficticios en el escenario (tabla Gherkin); credenciales solo en `.env` y documentadas en `.env.example` sin valor.
+- En `purchase.feature`, `Esquema del escenario` tag `@checkout` con los mismos `Ejemplos`: comprar `<producto>` como invitado con un comprador aleatorio de `tests/data/buyers.json` (dirección incluida) y pagar con tarjeta aleatoria de `tests/data/cards.json`; ver "Payment was successful" y una factura `INV-`.
+- Al menos 5 compradores sintéticos y 3 tarjetas de prueba (D15). Se imprime comprador y etiqueta de tarjeta, nunca el número.
+- Page Object `CheckoutPage`. Marker `checkout` registrado.
+- Protección: si `BASE_URL` no es el host de Toolshop, los escenarios `@checkout` no se ejecutan (skip con motivo explícito), para que nunca se pague en otro sitio (D12, D14).
 
 ### T5 · Evidencia en fallos — `pending`
 Criterio de aceptación:
@@ -54,6 +57,13 @@ Criterio de aceptación:
 - Escenario con tag `@smoke_reuse`: abrir la home de `REUSE_URL` y buscar un término genérico muestra al menos un resultado.
 - Sin carrito ni checkout. Excluido por defecto; solo corre a demanda (`-m smoke_reuse` o equivalente).
 - `REUSE_URL` documentada en `.env.example` sin valor.
+
+## Dudas para el usuario (2026-11-18)
+1. Las tarjetas de PlacetoPay salen de una página de un integrador (docs.y.uno), no de la documentación oficial. ¿Las confirmas o tienes la lista oficial?
+2. Toolshop aprueba cualquier tarjeta con formato válido, así que no se pueden probar rechazos. ¿Hace falta cubrir rechazos (mock de la API) o basta con el camino feliz?
+3. Toolshop calcula la ciudad y el estado a partir del código postal (a veces con valores de relleno). Los compradores no traen ciudad ni estado. ¿Está bien así?
+4. `recordings/raw_full_flow.py` y `recordings/T4.py` (con login) ya no se usan. ¿Se conservan o se borran? No están en git.
+5. T2–T4 no están en ningún commit.
 
 ## Fases siguientes (se detallan al cerrar la anterior)
 - Fase 2: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto.

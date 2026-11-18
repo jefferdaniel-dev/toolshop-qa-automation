@@ -13,7 +13,7 @@ Busca:
 - Archivos `.env` o similares sin ignorar en `.gitignore`.
 - Datos sensibles en logs, prints, URLs o query strings.
 - Variables nuevas no documentadas en `.env.example` (solo el nombre, sin valor real).
-- Flujo de checkout que confirme un pago u orden real.
+- Pago u orden confirmados fuera de Toolshop (D14), o datos de tarjeta que no sean de prueba.
 - Dependencias nuevas sin versión fijada o de origen dudoso.
 
 Devuelve exactamente:

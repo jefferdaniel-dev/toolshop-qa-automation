@@ -1,0 +1,5 @@
+[
+  {"label": "visa-aprobada", "number": "4381-0800-0000-0029", "expiration": "12/2030", "cvv": "123"},
+  {"label": "mastercard-aprobada-3ds", "number": "5180-3000-0000-0005", "expiration": "11/2031", "cvv": "456"},
+  {"label": "visa-aprobada-demorada", "number": "4666-6666-6666-6669", "expiration": "10/2032", "cvv": "789"}
+]

@@ -1,6 +1,6 @@
 # Reglas del proyecto
 
-Proyecto: automatización QA de ecommerce. Suite principal en Toolshop (buscar → carrito → checkout con datos, sin confirmar pedido); smoke de solo lectura en reuse.cl (ver `brain/decisions.md` D12).
+Proyecto: automatización QA de ecommerce. Suite principal en Toolshop (buscar → carrito → checkout completo con tarjetas de prueba, D14); smoke de solo lectura en reuse.cl (ver `brain/decisions.md` D12).
 Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futuras: GitHub Actions, Supabase, Next.js (v0 + Claude Design), Docker.
 
 ## Comunicación
@@ -30,7 +30,7 @@ Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futur
 - Configuración (URL base, credenciales de prueba) siempre desde variables de entorno.
 - Datos de prueba sintéticos; nunca datos reales de personas.
 - Nunca poner datos sensibles en logs, URLs, capturas ni reportes.
-- El checkout se detiene antes de confirmar cualquier pago u orden real.
+- Solo se completan pagos en Toolshop con tarjetas de prueba (D14). En sitios reales (reuse.cl) nunca se llega al carrito ni al checkout.
 
 ## Código
 - Gherkin en español (lo lee negocio); código e identificadores en inglés.
