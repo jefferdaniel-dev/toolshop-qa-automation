@@ -22,7 +22,7 @@ Ya disponible: Git, Node/npm, GitHub CLI con sesión iniciada (scopes `repo`, `w
 Sitio principal: Toolshop (`BASE_URL`). Smoke secundario: reuse.cl (`REUSE_URL`), ver D12.
 Las tareas T2–T4 y T6 parten de una grabación de codegen del usuario en `recordings/<id>.py` (ver D8).
 
-### T1 · Entorno de pruebas base — `blocked` (P1)
+### T1 · Entorno de pruebas base — `done`
 Criterio de aceptación:
 - `.venv` con Python 3.15 y `requirements.txt` con versiones fijadas de pytest, pytest-bdd y pytest-playwright.
 - `tests/conftest.py` toma la URL base de la variable de entorno `BASE_URL`.
