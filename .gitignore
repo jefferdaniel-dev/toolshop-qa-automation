@@ -1,0 +1,14 @@
+.env
+.env.local
+.env.*.local
+.env.production
+.venv/
+recordings/
+__pycache__/
+.pytest_cache/
+test-results/
+playwright-report/
+reports/
+node_modules/
+.next/
+.claude/settings.local.json
