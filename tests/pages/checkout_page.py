@@ -1,5 +1,6 @@
 from playwright.sync_api import Page, Response
 
+from tests.pages.api import is_api_call
 from tests.pages.login_page import LoginPage
 
 
@@ -29,6 +30,7 @@ class CheckoutPage:
         self.finish_button = page.get_by_test_id("finish")
         self.payment_success_message = page.get_by_test_id("payment-success-message")
         self.order_confirmation = page.get_by_text("Thanks for your order")
+        self.invoice_path = None
 
     def fill_guest(self, email: str, first_name: str, last_name: str):
         self.guest_tab.click()
@@ -54,13 +56,16 @@ class CheckoutPage:
         # each response overwrites it.
         lookups = []
 
+        def is_lookup(request) -> bool:
+            return is_api_call(request, "GET", "/postcode-lookup")
+
         def collect(request):
-            if "/postcode-lookup" in request.url:
+            if is_lookup(request):
                 lookups.append(request)
 
         self.page.on("request", collect)
         try:
-            with self.page.expect_response(lambda r: "/postcode-lookup" in r.url):
+            with self.page.expect_response(lambda r: is_lookup(r.request)):
                 self.postal_code.fill(postal_code)
                 self.house_number.fill(house_number)
         finally:

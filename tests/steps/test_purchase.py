@@ -14,6 +14,7 @@ from tests.pages.home_page import HomePage
 from tests.pages.login_page import LoginPage
 from tests.pages.product_page import ProductPage
 from tests.pages.search_results_page import SearchResultsPage
+from tests.steps.helpers import expect_status, open_store
 
 scenarios("../features/purchase.feature")
 
@@ -39,39 +40,22 @@ def card() -> dict:
     return chosen
 
 
-@given(
-    "que el usuario está en la tienda",
-    target_fixture="home_page",
-)
-def store_with_products(page: Page, evidence):
-    home = HomePage(page)
-    response = home.open()
-    assert response.status == 200, f"GET /products returned {response.status}"
-    expect(home.product_names.first).to_be_visible()
-    evidence.capture("home")
-    return home
-
-
-def expect_only_matching(results_page: SearchResultsPage, product: str):
-    expect(results_page.product_names.first).to_contain_text(product)
-    expect(results_page.non_matching(product)).to_have_count(0)
-
-
 @when(parsers.parse('busca "{product}"'), target_fixture="results_page")
 def search_product(home_page: HomePage, product: str, evidence):
     home_page.type_search(product)
     evidence.capture("busqueda")
     results, response = home_page.submit_search()
-    assert response.status == 200, f"GET /products/search returned {response.status}"
+    expect_status(response, 200)
     # The screenshot must show the filtered list, not the home list still on screen.
-    expect_only_matching(results, product)
+    results.wait_until_filtered(product)
     evidence.capture("resultados")
     return results
 
 
 @then(parsers.parse('ve resultados y todos contienen "{product}"'))
 def see_matching_results(results_page: SearchResultsPage, product: str):
-    expect_only_matching(results_page, product)
+    expect(results_page.product_names.first).to_contain_text(product)
+    expect(results_page.non_matching(product)).to_have_count(0)
 
 
 @when(
@@ -87,14 +71,14 @@ def add_to_cart(product_page: ProductPage, evidence):
     price = product_page.loaded_price()
     evidence.capture("producto")
     response = product_page.add_to_cart()
-    assert response.status == 200, f"POST /carts/{{id}} returned {response.status}"
+    expect_status(response, 200)
     return price
 
 
 @when("abre el carrito", target_fixture="cart_page")
 def open_cart(product_page: ProductPage):
     cart, response = product_page.open_cart()
-    assert response.status == 200, f"GET /carts/{{id}} returned {response.status}"
+    expect_status(response, 200)
     return cart
 
 
@@ -125,8 +109,7 @@ def log_in(login: LoginPage, evidence):
     # The screenshot must not reveal the password.
     expect(login.password).to_have_attribute("type", "password")
     evidence.capture("login")
-    response = login.submit()
-    assert response.status == 200, f"POST /users/login returned {response.status}"
+    expect_status(login.submit(), 200)
 
 
 ACCESS_TYPES = ("invitado", "login_checkout", "login_home")
@@ -145,10 +128,7 @@ def choose_access(page: Page, access: str, evidence) -> str:
             "or an empty cell"
         )
     if access == "login_home":
-        home = HomePage(page)
-        response = home.open()
-        assert response.status == 200, f"GET /products returned {response.status}"
-        log_in(home.open_login(), evidence)
+        log_in(open_store(page).open_login(), evidence)
         expect(page).to_have_url(re.compile(r"/account"))
     return access
 
@@ -163,15 +143,16 @@ def continue_checkout(cart_page: CartPage, access: str, buyer: dict, evidence):
         return checkout
     if access == "login_checkout":
         log_in(checkout.login, evidence)
-    else:
-        # Already logged in, the checkout loads the profile on arrival; entering
-        # the address step before it lands requests it again, and that late copy
-        # wipes the address typed afterwards.
+        checkout.proceed_as_user()
+        # The address step asks for the profile again (GET /users/me) and fills
+        # the form with it; typing before it lands loses the address.
         expect(checkout.street).not_to_have_value("")
-    checkout.proceed_as_user()
-    # Entering the address step loads the profile and overwrites the form; typing
-    # before it arrives loses the address.
+        return checkout
+    # Already logged in, the checkout fills the address from the profile on
+    # arrival; entering the address step before that requests the profile again,
+    # and the late copy wipes the address typed afterwards.
     expect(checkout.street).not_to_have_value("")
+    checkout.proceed_as_user()
     return checkout
 
 
@@ -190,7 +171,7 @@ def enter_address(
     country: str,
 ) -> dict:
     response = checkout_page.fill_address(country, postal_code, house_number, street)
-    assert response.status == 200, f"GET /postcode-lookup returned {response.status}"
+    expect_status(response, 200)
     return response.json()
 
 
@@ -208,8 +189,7 @@ def pay_with_card(checkout_page: CheckoutPage, buyer: dict, card: dict, evidence
     checkout_page.proceed_to_payment()
     checkout_page.fill_card(card, f"{buyer['first_name']} {buyer['last_name']}")
     evidence.capture("pago")
-    response = checkout_page.submit_payment()
-    assert response.status == 200, f"POST /payment/check returned {response.status}"
+    expect_status(checkout_page.submit_payment(), 200)
 
 
 @then("ve que el pago fue exitoso")
@@ -222,10 +202,7 @@ def see_payment_success(checkout_page: CheckoutPage, evidence):
 
 @when("confirma el pedido")
 def confirm_order(checkout_page: CheckoutPage):
-    response = checkout_page.confirm_order()
-    assert (
-        response.status == 201
-    ), f"POST {checkout_page.invoice_path} returned {response.status}"
+    expect_status(checkout_page.confirm_order(), 201)
 
 
 @then("recibe un número de factura")

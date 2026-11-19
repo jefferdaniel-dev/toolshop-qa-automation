@@ -127,3 +127,11 @@
 - Pedido del usuario: push siempre con pregunta y hooks para que no se salten reglas. `settings.json`: push/commit/gh de publicación en `ask`. Hook `guard.py` (D25). Pruebas: 64 casos de comandos y 6 de commit en repo temporal, todos correctos; el hook bloqueó en vivo `pytest --showlocals`.
 - FURY ronda 1: FAIL (falso positivo de `-l` con pipes, `git commit -am` sin revisar, variantes de borrado recursivo) más mejoras; todas aplicadas. Ronda 2: PASS; su único hallazgo nuevo (`PYTEST_ADDOPTS=-l` no se bloqueaba) se corrigió. 67/67 casos.
 - `CLAUDE.md`: regla de Git actualizada. README reescrito para portafolio, sin mencionar el smoke de reuse.cl (pedido del usuario).
+
+## 2026-11-18 · T10 done
+- PICCOLO: `expect_status` y `open_store` en `tests/steps/helpers.py`; Given único "que el usuario está en la tienda" en `tests/steps/conftest.py` (home.feature pasó de "abre" a "está en"); `is_api_call` en `tests/pages/api.py` para `HomePage.open`, `submit_search` y `fill_address`; When "busca" sin `expect` (queda `wait_until_filtered` para la captura `resultados`); `invoice_path` en `__init__`; `addopts = --tb=short`. Fallo forzado: el mensaje queda `QUERY /products returned 200, expected 201`, sin host ni query. Verde: suite 12/12 ×2, checkout 5/5 ×5. Hallazgo: listado y búsqueda usan el método `QUERY` (D17).
+- Sonda de `proceed-2`: con `login_home` 0 peticiones; con `login_checkout` 1 `GET /users/me` 200 (D23). Se quitó la espera redundante de `login_home`. Step de acceso no separado (D26).
+- Validadores: ROCK LEE PASS (12/12, checkout 5/5 ×2, evidencias 01–10 con `_INV-`). SHIKAMARU PASS. FURY PASS. KAKASHI FAIL: sin evidencia escrita de la sonda.
+- JUEZ: sin fallo real; se cierra registrando la sonda y la decisión en brain. El orquestador subió la confianza corriendo la sonda de `login_home` sin la espera fija de 3 s: 0 peticiones en `proceed-2`, 3 de 3.
+- Sugerencias no aplicadas (fuera del criterio): `submit_payment`/`confirm_order` aún filtran con `url.endswith`; fusionar `is_lookup`/`collect`; mensaje del timeout de `wait_until_filtered`.
+- Siguiente: T14.

@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: T10.** Orden acordado con el usuario (2026-11-18): T11 → T12 → T13 → T10 → T5 → T6.
+**Siguiente: T14.** Orden acordado con el usuario (2026-11-18): T11 → T12 → T13 → T10 → T14 → T5 → T6.
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -49,10 +49,15 @@ Criterio de aceptación:
 - Page Object `CheckoutPage`. Marker `checkout` registrado.
 - Protección: si `BASE_URL` no es el host de Toolshop, los escenarios `@checkout` no se ejecutan (skip con motivo explícito), para que nunca se pague en otro sitio (D12, D14).
 
-### T5 · Evidencia en fallos — `pending`
+### T5 · Evidencia en fallos + reporte HTML — `pending`
+Reporte HTML pedido por el usuario (2026-11-18).
 Criterio de aceptación:
 - Al fallar un escenario se guarda trace y screenshot en `test-results/`.
 - En ejecución exitosa no se guardan.
+- Funciona con la ventana única de T14: el trace se corta por escenario dentro del contexto compartido.
+- `pytest-html` fijado en `requirements.txt`; cada corrida deja `reports/report.html` autocontenido (`--self-contained-html` en `pytest.ini`), con la captura y la ruta del trace en los escenarios fallidos.
+- README: dónde queda el reporte.
+- El reporte nunca muestra credenciales (sigue `--tb=short`).
 
 ### T6 · Smoke de reuse.cl — `pending`
 Criterio de aceptación:
@@ -77,7 +82,7 @@ Criterio de aceptación:
 - Registrado: login con `TEST_USER_EMAIL`/`TEST_USER_PASSWORD`; ambas documentadas sin valor en `.env.example`. Evidencia `login` con el formulario lleno, antes de entrar.
 - Credenciales nunca impresas ni en capturas (la captura de login enmascara la contraseña o la omite).
 
-### T10 · Refactor de verificación de status y steps — `pending`
+### T10 · Refactor de verificación de status y steps — `done`
 Origen: observaciones de KAKASHI y FURY al cierre de T8 y T9. Sin cambio de comportamiento; la suite sigue pasando igual.
 Criterio de aceptación:
 - Un solo helper de verificación de status reemplaza los asserts repetidos: guarda el status en una variable antes de comparar y el mensaje dice método y ruta, sin host ni query (pytest no debe imprimir la URL completa de la Response).
@@ -114,6 +119,15 @@ Criterio de aceptación:
 - Al confirmar una compra, la carpeta del escenario se renombra agregando el número de factura al final: `<producto>_<fecha-hora>_INV-…`.
 - Si la compra no llega a factura, la carpeta queda con el nombre original.
 - Actualizar D21.
+
+### T14 · Una sola ventana de navegador por corrida — `pending`
+Pedido del usuario (2026-11-18): con `--headed`, hoy se abre y cierra una ventana por fila de `Ejemplos`; genera ruido.
+Criterio de aceptación:
+- Con `--headed`, toda la corrida usa una sola ventana: un contexto y una página compartidos por la sesión.
+- Antes de cada escenario se limpian cookies, `localStorage` y `sessionStorage`, y se parte de `about:blank`; ningún escenario hereda carrito ni sesión del anterior.
+- Sin `--headed` (CI) se mantiene un contexto aislado por prueba.
+- Prueba de aislamiento: correr `-m login` seguido de `-m invitado` en la misma sesión (`-m "login or invitado"`) pasa, y el invitado no aparece autenticado.
+- Evidencias por escenario sin cambios (D21). Registrar la decisión en `brain/decisions.md`.
 
 ## Fases siguientes (se detallan al cerrar la anterior)
 - Fase 2: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto.

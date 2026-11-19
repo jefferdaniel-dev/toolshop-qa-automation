@@ -1,5 +1,6 @@
 from playwright.sync_api import Page, Response
 
+from tests.pages.api import is_api_call
 from tests.pages.login_page import LoginPage
 from tests.pages.search_results_page import SearchResultsPage
 
@@ -12,9 +13,10 @@ class HomePage:
         self.search_button = page.get_by_test_id("search-submit")
         self.sign_in_link = page.get_by_test_id("nav-sign-in")
 
+    # Toolshop lists products with the HTTP QUERY method, not GET.
     def open(self) -> Response:
         with self.page.expect_response(
-            lambda r: r.url.endswith("/products") or "/products?" in r.url
+            lambda r: is_api_call(r.request, "QUERY", "/products")
         ) as response_info:
             self.page.goto("/")
         return response_info.value
@@ -24,7 +26,7 @@ class HomePage:
 
     def submit_search(self) -> tuple[SearchResultsPage, Response]:
         with self.page.expect_response(
-            lambda r: "/products/search" in r.url
+            lambda r: is_api_call(r.request, "QUERY", "/products/search")
         ) as response_info:
             self.search_button.click()
         return SearchResultsPage(self.page), response_info.value
