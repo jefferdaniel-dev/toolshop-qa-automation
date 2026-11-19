@@ -12,6 +12,7 @@ class HomePage:
         self.search_input = page.get_by_test_id("search-query")
         self.search_button = page.get_by_test_id("search-submit")
         self.sign_in_link = page.get_by_test_id("nav-sign-in")
+        self.user_menu = page.get_by_test_id("nav-menu")
 
     # Toolshop lists products with the HTTP QUERY method, not GET.
     def open(self) -> Response:

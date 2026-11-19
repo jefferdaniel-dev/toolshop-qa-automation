@@ -28,10 +28,11 @@ Característica: Compra de productos
       | Combination Pliers |
       | Cordless Drill 12V |
 
-  @checkout
-  Esquema del escenario: Comprar un producto según el tipo de acceso termina con pago exitoso y factura
-    Dado que el usuario usa el acceso "<acceso>"
-    Y que el usuario está en la tienda
+  @compra
+  Esquema del escenario: Comprar un producto según el acceso y la etapa
+    Dado que el usuario está en la tienda
+    Y que el usuario usa el acceso "<acceso>"
+    Y que la compra llega hasta la etapa "<etapa>"
     Cuando busca "<producto>"
     Y abre "<producto>" desde los resultados
     Y agrega el producto al carrito
@@ -40,20 +41,20 @@ Característica: Compra de productos
     Cuando continúa la compra
     Y ingresa la dirección "<calle>" "<numero>" con código postal "<codigo_postal>" en "<pais>"
     Entonces la ciudad y el estado se autocompletan según el código postal
-    Cuando paga con una tarjeta de prueba
-    Entonces ve que el pago fue exitoso
-    Cuando confirma el pedido
-    Entonces recibe un número de factura
+    Cuando llena la tarjeta de prueba
+    Entonces la compra termina según la etapa
 
-    @invitado
-    Ejemplos: Invitado
-      | producto           | acceso         | pais | codigo_postal | numero | calle                |
-      | Thor Hammer        | invitado       | CO   | 110321        | 15-88  | Carrera 6            |
-      | Combination Pliers |                | NL   | 1071XX        | 1      | Museumstraat         |
+    # acceso:
+    #   invitado o vacío = compra sin cuenta, con un comprador sintético al azar
+    #   login_home       = inicia sesión desde la home antes de buscar
+    #   login_checkout   = inicia sesión en el paso de login del checkout
+    # etapa:
+    #   checkout     = llena todo y se detiene antes de pagar (el botón de pagar queda habilitado)
+    #   confirmacion = paga y obtiene factura
 
-    @login
-    Ejemplos: Login
-      | producto           | acceso         | pais | codigo_postal | numero | calle                |
-      | Thor Hammer        | login_checkout | US   | 10118         | 350    | 5th Avenue           |
-      | Combination Pliers | login_home     | US   | 94043         | 1600   | Amphitheatre Parkway |
-      | Cordless Drill 12V | login_home     | DE   | 11011         | 1      | Platz der Republik   |
+    Ejemplos:
+      | producto           | acceso         | etapa        | pais | codigo_postal | numero | calle                |
+      | Thor Hammer        | login_checkout | confirmacion | US   | 10118         | 350    | 5th Avenue           |
+      | Cordless Drill 12V | login_home     | checkout     | DE   | 11011         | 1      | Platz der Republik   |
+      | Thor Hammer        | invitado       | checkout     | CO   | 110321        | 15-88  | Carrera 6            |
+      | Combination Pliers |                | confirmacion | NL   | 1071XX        | 1      | Museumstraat         |

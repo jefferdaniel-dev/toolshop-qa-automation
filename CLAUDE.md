@@ -10,8 +10,10 @@ Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futur
 
 ## Flujo de trabajo
 - Trabajo guiado por `brain/tasks.md`. Una tarea a la vez, vía `/hiruzen`.
+- Antes de escribir el criterio de una tarea nueva, confirmar con el usuario el comportamiento esperado en sus propias palabras; si el pedido admite dos lecturas, preguntar (lección de T14).
 - Leer `brain/decisions.md` y las últimas entradas de `brain/log.md` antes de empezar.
 - Test primero (escenario que falla), luego el código mínimo que lo hace pasar.
+- Al validar se corre solo el escenario que se tocó, elegido con `-m <tag> -k "<texto de la fila>"`, sin comentar filas del `.feature`. Más de uno solo si la validación lo exige (p. ej. dos tipos de acceso seguidos), diciendo por qué. La suite completa solo si el usuario la pide.
 - Al terminar: actualizar estado en `brain/tasks.md` y agregar entrada en `brain/log.md`.
 
 ## Grabaciones con codegen
@@ -30,6 +32,7 @@ Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futur
 - Configuración (URL base, credenciales de prueba) siempre desde variables de entorno.
 - Datos de prueba sintéticos; nunca datos reales de personas.
 - Nunca poner datos sensibles en logs, URLs, capturas ni reportes.
+- Para forzar un fallo al validar, nunca usar credenciales incorrectas de una cuenta compartida (la cuenta demo se bloquea); provocar el fallo de otra forma, sin tocar el login.
 - Solo se completan pagos en Toolshop con tarjetas de prueba (D14). En sitios reales (reuse.cl) nunca se llega al carrito ni al checkout.
 
 ## Código

@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: T14.** Orden acordado con el usuario (2026-11-18): T11 → T12 → T13 → T10 → T14 → T5 → T6.
+**Siguiente: T6.** Orden acordado con el usuario (2026-11-19): T15 → T16 → T17 → T5 → T18 → T6.
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -49,15 +49,15 @@ Criterio de aceptación:
 - Page Object `CheckoutPage`. Marker `checkout` registrado.
 - Protección: si `BASE_URL` no es el host de Toolshop, los escenarios `@checkout` no se ejecutan (skip con motivo explícito), para que nunca se pague en otro sitio (D12, D14).
 
-### T5 · Evidencia en fallos + reporte HTML — `pending`
-Reporte HTML pedido por el usuario (2026-11-18).
+### T5 · Captura en fallos + reporte HTML — `done`
+Reporte HTML pedido por el usuario (2026-11-18). Sin trace ni video (decisión del usuario 2026-11-19): el trace graba la contraseña en texto plano (D25) y los videos no se quieren por ahora.
 Criterio de aceptación:
-- Al fallar un escenario se guarda trace y screenshot en `test-results/`.
-- En ejecución exitosa no se guardan.
-- Funciona con la ventana única de T14: el trace se corta por escenario dentro del contexto compartido.
-- `pytest-html` fijado en `requirements.txt`; cada corrida deja `reports/report.html` autocontenido (`--self-contained-html` en `pytest.ini`), con la captura y la ruta del trace en los escenarios fallidos.
+- Al fallar un escenario se guarda una captura de la pantalla en el momento del fallo en `test-results/`.
+- En ejecución exitosa no se guarda nada en `test-results/`.
+- `pytest-html` fijado en `requirements.txt`; cada corrida deja un reporte HTML autocontenido (`--self-contained-html` en `pytest.ini`), con la captura incrustada en los escenarios fallidos.
+- Un reporte por corrida, sin sobrescribir los anteriores, con nombre que identifica la corrida: `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>.html`, donde `<selección>` sale de `-m` y `-k` saneados (p. ej. `compra_Cordless-and-login_home`) o `all` si no hay filtro (pedido del usuario, 2026-11-19).
 - README: dónde queda el reporte.
-- El reporte nunca muestra credenciales (sigue `--tb=short`).
+- El reporte nunca muestra credenciales (sigue `--tb=short`; sin trace ni video).
 
 ### T6 · Smoke de reuse.cl — `pending`
 Criterio de aceptación:
@@ -120,7 +120,7 @@ Criterio de aceptación:
 - Si la compra no llega a factura, la carpeta queda con el nombre original.
 - Actualizar D21.
 
-### T14 · Una sola ventana de navegador por corrida — `pending`
+### T14 · Una sola ventana de navegador por corrida — `done` (revertida 2026-11-19: el usuario quería un navegador por prueba, el comportamiento original; ver D27)
 Pedido del usuario (2026-11-18): con `--headed`, hoy se abre y cierra una ventana por fila de `Ejemplos`; genera ruido.
 Criterio de aceptación:
 - Con `--headed`, toda la corrida usa una sola ventana: un contexto y una página compartidos por la sesión.
@@ -128,6 +128,36 @@ Criterio de aceptación:
 - Sin `--headed` (CI) se mantiene un contexto aislado por prueba.
 - Prueba de aislamiento: correr `-m login` seguido de `-m invitado` en la misma sesión (`-m "login or invitado"`) pasa, y el invitado no aparece autenticado.
 - Evidencias por escenario sin cambios (D21). Registrar la decisión en `brain/decisions.md`.
+
+### T15 · Columna `etapa` y tabla única de compra — `done`
+Pedido del usuario (2026-11-19). Reemplaza los bloques `@login`/`@invitado`.
+Criterio de aceptación:
+- Una sola tabla de `Ejemplos` en el escenario de compra, con columnas `acceso` y `etapa`, y un comentario encima que explique cada valor de ambas.
+- `etapa`: `checkout` llena todo (dirección y tarjeta), toma la captura `pago` y se detiene justo antes del clic en pagar, verificando que el botón esté habilitado; `confirmacion` paga, ve "Payment was successful", confirma y recibe factura `INV-`. Un valor desconocido falla con un mensaje claro.
+- Al menos una fila de cada `acceso` (una vacía) y de cada `etapa`.
+- Sin tags `@login`/`@invitado`. Scripts npm: `toolshop:checkout` (filas `checkout`), `toolshop:confirmacion` (filas `confirmacion`), `toolshop:login` y `toolshop:invitado` (filtro `-k`, la fila vacía cuenta como invitado). Verificar cada filtro con `--collect-only`.
+- La protección "solo en Toolshop" sigue cubriendo el escenario. README: tabla de comandos y una línea sobre `etapa`. Actualizar D16, D20, D24.
+
+### T16 · Capturas de `login_home`: home → login → home — `done`
+Pedido del usuario (2026-11-19). Hoy la carpeta empieza en `01-login`.
+Criterio de aceptación:
+- Con `login_home`, las capturas empiezan `01-home` (tienda sin sesión), `02-login` (formulario lleno), `03-home` (tienda ya autenticada) y siguen igual.
+- Los demás accesos no cambian.
+
+### T17 · Nombres cortos de evidencias — `done`
+Pedido del usuario (2026-11-19).
+Criterio de aceptación:
+- Carpeta: `evidencias/<YYYY-MM-DD>/<HH-MM-SS>_<tag>_<producto>[_<acceso>][_INV-n]`; `<tag>` es `etapa` en compra (`checkout`/`confirmacion`) y `search`/`cart`/`home` en los demás; `<acceso>` solo en compra.
+- Capturas: `NN-<modulo>.png`.
+- Actualizar D21.
+
+### T18 · README: cómo se construyó con IA — `done`
+Pedido del usuario (2026-11-19): a los reclutadores les interesa cómo se resolvieron los problemas, no solo el resultado. Formato elegido: opción B.
+Criterio de aceptación:
+- `docs/proceso-con-ia.md`: diagrama del flujo de agentes (HIRUZEN → PICCOLO → ROCK LEE/SHIKAMARU/FURY/KAKASHI → JUEZ → reintento), las reglas que se impusieron y por qué (TDD, nunca verde sin correr, alcance mínimo, hook de seguridad, validar solo lo tocado), cifras sacadas de `brain/` (tareas cerradas, reintentos, hallazgos de validadores) y una bitácora de 5–7 problemas reales contados como problema → cómo se detectó → qué se decidió → qué cambió, con enlace a la decisión (`brain/decisions.md`, D-n).
+- Casos mínimos: método `QUERY` de Toolshop; carrera de la precarga del perfil (D23); `gh repo create --push` que saltó el deny y dio origen al hook (D25); T14 malinterpretada y revertida (D27/D28); captura en fallos que no funcionaba con pytest-bdd, hallada por un validador y diagnosticada por JUEZ (D29); cuenta demo bloqueada por un fallo forzado.
+- README: sección "Cómo se construyó" con un resumen corto (3–5 líneas) y enlace al documento; corregir lo que haya quedado desactualizado en esa sección.
+- Todo verificable contra `brain/log.md` y `brain/decisions.md`; nada inventado. Sin datos personales (nombre, correo), credenciales ni valores de `.env`. Diagrama en Mermaid (GitHub lo renderiza).
 
 ## Fases siguientes (se detallan al cerrar la anterior)
 - Fase 2: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto.

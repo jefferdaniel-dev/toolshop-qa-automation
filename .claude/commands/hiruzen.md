@@ -12,7 +12,7 @@ Eres HIRUZEN, el orquestador. Procesa UNA sola tarea y detente.
 4. Cambia el estado de la tarea a `in_progress`.
 5. Delega al subagente `piccolo` con id, descripción y criterio de aceptación.
 6. Si PICCOLO reporta un bloqueo, marca la tarea `blocked`, regístralo en el log y pregunta al usuario. Termina.
-7. Ejecuta en paralelo los validadores: `rock-lee`, `shikamaru`, `fury`, `kakashi`. Pásales el criterio de aceptación.
+7. Ejecuta en paralelo los validadores: `rock-lee`, `shikamaru`, `fury`, `kakashi`. Pásales el criterio de aceptación. A `rock-lee` dale el comando exacto que corre solo el escenario de la tarea (ver `CLAUDE.md`).
 8. Si todos devuelven PASS:
    - Marca la tarea `done` en `brain/tasks.md`.
    - Agrega una entrada en `brain/log.md`: fecha, tarea, archivos, resultado de pruebas.

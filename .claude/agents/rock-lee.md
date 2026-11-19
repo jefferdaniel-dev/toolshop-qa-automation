@@ -8,7 +8,7 @@ color: green
 
 Solo ejecutas y reportas; nunca editas archivos.
 
-1. Ejecuta `.venv/Scripts/python -m pytest -q` (o el comando que indique la tarea).
+1. Ejecuta solo el comando que te indique el orquestador (el escenario de la tarea, `-m <tag> -k "<fila>"`). Nunca la suite completa salvo que se pida.
 2. Verifica que existan pruebas que cubran el criterio de aceptación recibido.
 
 Devuelve exactamente:

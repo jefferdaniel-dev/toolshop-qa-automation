@@ -6,8 +6,9 @@
     "toolshop:all": ".venv\\Scripts\\python -m pytest --headed",
     "toolshop:search": ".venv\\Scripts\\python -m pytest -m search --headed",
     "toolshop:cart": ".venv\\Scripts\\python -m pytest -m cart --headed",
-    "toolshop:checkout": ".venv\\Scripts\\python -m pytest -m checkout --headed",
-    "toolshop:invitado": ".venv\\Scripts\\python -m pytest -m invitado --headed",
-    "toolshop:login": ".venv\\Scripts\\python -m pytest -m login --headed"
+    "toolshop:checkout": ".venv\\Scripts\\python -m pytest -m compra -k \"not confirmacion\" --headed",
+    "toolshop:confirmacion": ".venv\\Scripts\\python -m pytest -m compra -k confirmacion --headed",
+    "toolshop:invitado": ".venv\\Scripts\\python -m pytest -m compra -k \"not login\" --headed",
+    "toolshop:login": ".venv\\Scripts\\python -m pytest -m compra -k login --headed"
   }
 }

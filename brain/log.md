@@ -135,3 +135,74 @@
 - JUEZ: sin fallo real; se cierra registrando la sonda y la decisión en brain. El orquestador subió la confianza corriendo la sonda de `login_home` sin la espera fija de 3 s: 0 peticiones en `proceed-2`, 3 de 3.
 - Sugerencias no aplicadas (fuera del criterio): `submit_payment`/`confirm_order` aún filtran con `url.endswith`; fusionar `is_lookup`/`collect`; mensaje del timeout de `wait_until_filtered`.
 - Siguiente: T14.
+
+## 2026-11-19 · T14 done
+- PICCOLO: `tests/conftest.py` sobrescribe `context` y `page`; con `--headed`, `shared_page` (alcance sesión) y `reset_browser_state` (cookies, visita a `BASE_URL` para vaciar `localStorage`/`sessionStorage`, `about:blank`); sin `--headed`, `new_context` por prueba. `purchase.feature`: bloque `@login` antes de `@invitado` para que `-m "login or invitado"` pruebe el aislamiento. Invitado sin sesión verificado de forma implícita: `fill_guest` exige la pestaña "Continue as Guest". Control negativo (sin limpieza): 4 failed, 1 passed. D27.
+- Validadores: ROCK LEE PASS (`login or invitado` headed 5/5 ×2, suite headless 12/12, headed 12/12; evidencias D21 intactas). FURY PASS (no bloqueante: IndexedDB/service workers sin limpiar). SHIKAMARU FAIL y KAKASHI FAIL: `base_url` sin usar en `shared_page`; D27 afirmaba que el trace de T5 ya se corta por escenario, pero el contexto compartido queda fuera del grabador de artefactos de pytest-playwright.
+- JUEZ: culpa PRUEBA, dos correcciones mínimas. El orquestador las aplicó sin reintento (parámetro quitado, D27 reformulada como pendiente de T5). Tras el cambio: `login or invitado` headed 5/5, suite headless 12/12.
+- Ventana única: confirmada por código, no observada en pantalla.
+- Siguiente: T5.
+
+## 2026-11-19 · T14 revertida y nuevas tareas
+- El usuario aclaró que quería un navegador por prueba, en secuencia: T14 se revirtió (`tests/conftest.py` restaurado; D27 marcada revertida; D28).
+- Regla nueva: validar solo el escenario tocado (`CLAUDE.md`, `piccolo.md`, `rock-lee.md`, `/hiruzen`).
+- Nuevas tareas T15 (columna `etapa`, tabla única), T16 (`login_home` home → login → home), T17 (nombres cortos de evidencias), T18 (README sobre el proceso con IA). Orden: T15 → T16 → T17 → T5 → T18 → T6.
+
+## 2026-11-19 · T15 done
+- PICCOLO: tabla única de `Ejemplos` con `acceso` y `etapa` y comentario que explica los valores; tag del escenario `@checkout` → `@compra` (para no confundir con `etapa=checkout`); Given `que la compra llega hasta la etapa` (lista cerrada `STAGES`); When `llena la tarjeta de prueba`; Then `la compra termina según la etapa` (`checkout`: botón de pagar habilitado, sin clic; `confirmacion`: paga, éxito, confirma, factura). Scripts `toolshop:checkout|confirmacion|login|invitado` con `-m compra -k`. Markers `login`/`invitado`/`checkout` quitados. README y D14, D16, D19, D20, D24.
+- Pruebas (solo filas tocadas, D28): `Cordless and checkout` (login_home) 1/1, `Combination and confirmacion` (acceso vacío) 1/1 con `_INV-`, `Thor and login_checkout` 1/1 con `_INV-`, `Thor and invitado` 1/1 terminando en `08-pago`. Etapa desconocida: `Unknown stage "pagado"` (fila temporal, retirada). `--collect-only` de los 4 filtros: 2 filas cada uno, la vacía cae en `not login`.
+- Validadores: ROCK LEE, SHIKAMARU, FURY y KAKASHI PASS.
+- Observaciones no aplicadas: el Then final ejecuta el pago en `confirmacion` (KAKASHI sugiere un When aparte); `-k` por subcadena se rompería con un producto que contenga "login" o "confirmacion" (D24); `@cart` no tiene guard solo-Toolshop (previo, FURY).
+- Siguiente: T16.
+
+## 2026-11-19 · T16 done
+- PICCOLO: helper `open_store_with_products` en `tests/steps/helpers.py` (abre la tienda, verifica productos, captura `home`); lo usan el Given de la tienda y la rama `login_home` antes de abrir el login. D21 y D26 actualizadas.
+- Pruebas (solo filas tocadas, D28): `Cordless and login_home` 1/1 → `01-home`, `02-login`, `03-home`, `04-busqueda`…; `Thor and invitado` 1/1 y `Thor and login_checkout` 1/1 sin cambios (`06-invitado` / `06-login`).
+- Validadores: ROCK LEE, SHIKAMARU, FURY y KAKASHI PASS.
+- Sin verificación explícita de sesión en `03-home` (el criterio no la pide; el login se verifica con la URL `/account`). Riesgo menor: la captura podría salir antes de que se pinte el menú de usuario.
+- Siguiente: T17.
+- Ajuste pedido por el usuario (2026-11-19): `03-home` debe mostrar el usuario logueado. Se reordenó el Gherkin de compra (`está en la tienda` antes del acceso) y `login_home` vuelve a la home y espera `nav-menu` antes de capturar; se retiró el helper `open_store_with_products` (quedó de un solo uso). `Cordless and login_home` 1/1 (01-home, 02-login, 03-home, 04-busqueda…), `Thor and invitado` 1/1 sin cambios. D26 actualizada.
+
+## 2026-11-19 · T17 done
+- PICCOLO: `tests/conftest.py` arma la carpeta `evidencias/<fecha>/<HH-MM-SS>_<tag>_<producto>[_<acceso>]` (tag = `etapa` en compra, marker `search`/`cart`, `home` sin tag; acceso vacío → `invitado`) y las capturas `NN-<modulo>.png`; helper `slug`. D21.
+- Pruebas (solo lo necesario, D28): `Thor and login_checkout` 1/1 y `Combination and confirmacion` 1/1 con `_INV-`; `-m search` 3/3; home 1/1; ROCK LEE: `Cordless and login_home` 1/1 (`15-35-23_checkout_Cordless-Drill-12V_login_home`) y `-m cart -k Thor` 1/1 (`15-35-43_cart_Thor-Hammer`).
+- Validadores: ROCK LEE y FURY PASS. SHIKAMARU FAIL (README con el formato viejo) y KAKASHI FAIL (`append_to_folder` repetía el saneamiento de `slug`; falta comentario de la celda vacía). El orquestador aplicó las tres correcciones sin reintento por ser menores; tras el cambio `Combination and confirmacion` 1/1 → `15-36-12_confirmacion_Combination-Pliers_invitado_INV-2026000013`.
+- No aplicado: dos escenarios con mismos valores en el mismo segundo compartirían carpeta (solo pasaría en paralelo; FURY); fila `@compra` sin columna `etapa` daría `KeyError` (la tabla siempre la trae y `choose_stage` la valida).
+- Siguiente: T5.
+
+## 2026-11-19 · T5 intento 1 (FAIL)
+- Criterio ajustado con el usuario: captura en fallos + reporte HTML, sin trace ni video (D29).
+- PICCOLO: hook `pytest_runtest_makereport` en `tests/conftest.py`, `addopts` con `--html=reports/report.html --self-contained-html`, `pytest-html==4.2.0`. Solo lo probó con un test Playwright simple.
+- ROCK LEE FAIL: con `TEST_USER_PASSWORD=clave-falsa-t5`, `Thor and login_checkout` falló (401) pero no hubo captura ni `image/png` en el reporte. Credenciales ausentes del html (True/False). SHIKAMARU y FURY PASS; KAKASHI FAIL menor (relee el PNG, línea larga, orden de imports).
+- JUEZ: culpa PRUEBA. pytest-bdd pide `page` dinámicamente (`request.getfixturevalue`), así que no está en `item.funcargs`. Corrección: sobrescribir `page` para guardarla en `item.stash` (`pytest.StashKey`) y leerla desde el hook. Reintento 1.
+
+## 2026-11-19 · T5 reintento 1 → blocked (ENTORNO)
+- PICCOLO: fixture `page` sobrescrita que guarda la página en `item.stash` (`PAGE_KEY`); el hook la lee de ahí. Captura con los bytes de `page.screenshot`, imports y `requirements.txt` ordenados. El orquestador movió el comentario junto al hook (KAKASHI) y completó D29 (SHIKAMARU).
+- ROCK LEE: fallo forzado con clave falsa → `1 failed`, captura en `test-results/`, `image/png` en el reporte; clave real definida True, clave real en html False, clave falsa en html False. `-m search -k Thor` 1/1 sin `test-results/`. `Cordless and login_home` (sin forzar) → `POST /users/login returned 423` (Locked). FURY PASS.
+- Orquestador: `Thor and invitado` 1/1 con la fixture nueva, sin `test-results/`.
+- Causa probable del 423: la cuenta demo quedó bloqueada por los logins fallidos intencionales de la validación (3 hoy con `clave-falsa-t5`). No se reintentó login para no alargar el bloqueo. Lección: los fallos forzados no deben usar una clave incorrecta de la cuenta compartida.
+- Pendiente: confirmar con el usuario cómo desbloquear o esperar, y volver a correr una fila con login.
+- Reintento pedido por el usuario: `Cordless and login_home` → 423 de nuevo (2 corridas). La captura de fallo de T5 muestra el mensaje del sitio: "Account locked, too many failed attempts. Please contact the administrator." La captura confirma además que T5 funciona en un fallo real, con la contraseña enmascarada. El bloqueo no expira solo según el mensaje.
+- 2026-11-19, más tarde: `Cordless and login_home` 1/1; el bloqueo 423 de la cuenta demo expiró. T5 vuelve a `in_progress`. El aviso de Chrome que vio el usuario es del gestor de contraseñas (contraseña demo en filtraciones públicas), no del sitio.
+- Pedido del usuario: un reporte por corrida con nombre que identifique la corrida; agregado al criterio de T5.
+
+## 2026-11-19 · T5 done
+- Reporte por corrida (pedido del usuario): `conftest.py` en la raíz con un `pytest_configure` tryfirst que renombra `--html` a `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>.html` (`-m`/`-k` saneados, o `all`); vive en la raíz porque pytest-html lee la ruta en su `pytest_configure`, antes de cargar `tests/conftest.py`. `slug` en `tests/naming.py`. README y D29.
+- Validadores: ROCK LEE PASS (`cart Thor` y `search Combination`, un reporte nuevo cada uno, sin sobrescribir; evidencias con el formato de T17). SHIKAMARU y FURY PASS. KAKASHI FAIL: `from conftest import slug` frágil (depende del import mode) y línea larga; el orquestador movió `slug` a `tests/naming.py` y partió la línea. Tras el cambio: `-m cart -k Thor` 1/1 → `2026-11-19_16-23-50_cart_Thor.html` y `16-23-51_cart_Thor-Hammer`.
+- Captura en fallos verificada antes en dos fallos reales (clave falsa y cuenta bloqueada): imagen incrustada, contraseña enmascarada, ninguna clave en el html.
+- Se borraron reportes residuales de la validación (`report.html`, `*_smoke_none`, `*_all`).
+- Observaciones para la Fase 2 (FURY): el reporte incrusta capturas con tarjeta de prueba, comprador sintético y correo demo; no publicarlo como artefacto sin revisarlo. Los fallos forzados no deben usar una clave incorrecta de la cuenta compartida.
+- Siguiente: T18 (README sobre el proceso con IA).
+
+## 2026-11-19 · T18 intento 1 (FAIL)
+- PICCOLO (opus): `docs/proceso-con-ia.md` (diagrama, agentes, reglas, cifras, 6 casos) y resumen en el README. Señaló que la cuenta bloqueada no dejó una regla escrita, solo una lección.
+- Validadores: FURY PASS (sin datos personales). SHIKAMARU PASS con verificación de hechos (cifras y casos confirmados) y 3 imprecisiones. KAKASHI FAIL (afirmación falsa sobre las herramientas de los revisores, longitud, citas en la prosa, términos sin explicar).
+- JUEZ: culpa PRUEBA. Obligatorio: ROCK LEE sí tiene Bash; "lo detecté al ver el resultado" no está respaldado; mejor ejemplo de test primero (T3). Recomendado: una cita por caso, cifras en 4 viñetas, explicar términos. Reintento 1.
+
+## 2026-11-19 · T18 done
+- Reintento 1 (PICCOLO, opus): correcciones obligatorias de JUEZ (herramientas de los revisores, caso T14 sin afirmación inventada, ejemplo de test primero de T3) y recortes de KAKASHI: 2.627 → 1.591 palabras, una cita por caso, cifras en 4 viñetas, términos explicados; se mantienen los 6 casos y el diagrama.
+- Validadores: KAKASHI PASS, SHIKAMARU PASS (recontó cifras: 16 tareas, 8 reintentos, 23 FAIL incluida la ronda del hook, 10 dictámenes, 3 hallazgos). FURY PASS en el intento 1 (sin datos personales; el reintento no agregó datos). ROCK LEE no aplica (sin pruebas).
+- El orquestador aplicó dos precisiones de SHIKAMARU: el método `QUERY` apareció en T3/T10, no al implementar T2; los 23 FAIL incluyen 1 de la revisión del hook.
+- Pendiente para el usuario: las lecciones "no forzar fallos con clave incorrecta de la cuenta compartida" y "confirmar el pedido antes de implementar" no son reglas escritas en `CLAUDE.md`.
+- Siguiente: T6.
+- Pedido del usuario: las dos lecciones pasan a reglas en `CLAUDE.md` (confirmar el comportamiento esperado antes de escribir el criterio; nunca forzar fallos con credenciales incorrectas de una cuenta compartida). `docs/proceso-con-ia.md` actualizado para decirlo.

@@ -120,7 +120,9 @@ ACCESS_TYPES = ("invitado", "login_checkout", "login_home")
     parsers.re(r'que el usuario usa el acceso "(?P<access>[^"]*)"'),
     target_fixture="access",
 )
-def choose_access(page: Page, access: str, evidence) -> str:
+def choose_access(
+    page: Page, home_page: HomePage, access: str, evidence
+) -> str:
     access = access or "invitado"
     if access not in ACCESS_TYPES:
         pytest.fail(
@@ -128,9 +130,25 @@ def choose_access(page: Page, access: str, evidence) -> str:
             "or an empty cell"
         )
     if access == "login_home":
-        log_in(open_store(page).open_login(), evidence)
+        log_in(home_page.open_login(), evidence)
         expect(page).to_have_url(re.compile(r"/account"))
+        back_home = open_store(page)
+        expect(back_home.user_menu).to_be_visible()
+        evidence.capture("home")
     return access
+
+
+STAGES = ("checkout", "confirmacion")
+
+
+@given(
+    parsers.parse('que la compra llega hasta la etapa "{stage}"'),
+    target_fixture="stage",
+)
+def choose_stage(stage: str) -> str:
+    if stage not in STAGES:
+        pytest.fail(f'Unknown stage "{stage}"; expected one of {", ".join(STAGES)}')
+    return stage
 
 
 @when("continúa la compra", target_fixture="checkout_page")
@@ -184,15 +202,24 @@ def see_city_and_state_autocompleted(
     evidence.capture("direccion")
 
 
-@when("paga con una tarjeta de prueba")
-def pay_with_card(checkout_page: CheckoutPage, buyer: dict, card: dict, evidence):
+@when("llena la tarjeta de prueba")
+def fill_test_card(checkout_page: CheckoutPage, buyer: dict, card: dict, evidence):
     checkout_page.proceed_to_payment()
     checkout_page.fill_card(card, f"{buyer['first_name']} {buyer['last_name']}")
     evidence.capture("pago")
+
+
+@then("la compra termina según la etapa")
+def finish_purchase(checkout_page: CheckoutPage, stage: str, evidence):
+    if stage == "checkout":
+        expect(checkout_page.finish_button).to_be_enabled()
+        return
     expect_status(checkout_page.submit_payment(), 200)
+    see_payment_success(checkout_page, evidence)
+    confirm_order(checkout_page)
+    see_invoice_number(checkout_page, evidence)
 
 
-@then("ve que el pago fue exitoso")
 def see_payment_success(checkout_page: CheckoutPage, evidence):
     expect(checkout_page.payment_success_message).to_have_text(
         "Payment was successful"
@@ -200,12 +227,10 @@ def see_payment_success(checkout_page: CheckoutPage, evidence):
     evidence.capture("pago-exitoso")
 
 
-@when("confirma el pedido")
 def confirm_order(checkout_page: CheckoutPage):
     expect_status(checkout_page.confirm_order(), 201)
 
 
-@then("recibe un número de factura")
 def see_invoice_number(checkout_page: CheckoutPage, evidence):
     expect(checkout_page.order_confirmation).to_contain_text(INVOICE_NUMBER)
     evidence.capture("factura")
