@@ -206,3 +206,11 @@
 - Pendiente para el usuario: las lecciones "no forzar fallos con clave incorrecta de la cuenta compartida" y "confirmar el pedido antes de implementar" no son reglas escritas en `CLAUDE.md`.
 - Siguiente: T6.
 - Pedido del usuario: las dos lecciones pasan a reglas en `CLAUDE.md` (confirmar el comportamiento esperado antes de escribir el criterio; nunca forzar fallos con credenciales incorrectas de una cuenta compartida). `docs/proceso-con-ia.md` actualizado para decirlo.
+
+## 2026-11-19 · T6 blocked
+- El usuario pidió dejar T6 (smoke de reuse.cl) en pausa. Sin cambios de código. Se retoma cuando lo pida.
+
+## 2026-11-19 · Rol del autor en la documentación
+- Pedido del usuario: el proceso debe mostrar su aporte, no solo lo que hizo la IA. `docs/proceso-con-ia.md`: sección "Mi rol", línea "Mi aporte" en cada caso, casos 7 (03-home sin sesión pese a 4 PASS) y 8 (banderas `acceso`/`etapa`, idea del usuario), próximos pasos con su visión (Docker, Actions, Supabase con auth, front en Vercel, agente LangGraph con API de Grok, evals y skills, demo propia). README: resumen y próximas fases alineados.
+- Datos del usuario: la arquitectura de agentes viene de su experiencia laboral y estudio; el sitio real se descartó como principal por riesgo de afectar sus métricas.
+- Pendiente: `brain/tasks.md` aún lista Docker como Fase 5 y no incluye el agente LangGraph.

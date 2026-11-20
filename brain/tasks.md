@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: T6.** Orden acordado con el usuario (2026-11-19): T15 → T16 → T17 → T5 → T18 → T6.
+**Siguiente: ninguna.** T6 en pausa por decisión del usuario (2026-11-19). Orden acordado: T15 → T16 → T17 → T5 → T18 → T6.
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -59,7 +59,7 @@ Criterio de aceptación:
 - README: dónde queda el reporte.
 - El reporte nunca muestra credenciales (sigue `--tb=short`; sin trace ni video).
 
-### T6 · Smoke de reuse.cl — `pending`
+### T6 · Smoke de reuse.cl — `blocked` (en pausa por decisión del usuario, 2026-11-19)
 Criterio de aceptación:
 - Escenario con tag `@smoke_reuse`: abrir la home de `REUSE_URL` y buscar un término genérico muestra al menos un resultado.
 - Sin carrito ni checkout. Excluido por defecto; solo corre a demanda (`-m smoke_reuse` o equivalente).

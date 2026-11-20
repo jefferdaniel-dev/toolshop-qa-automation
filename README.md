@@ -149,15 +149,22 @@ Filtros extra de pytest van después de `--`, por ejemplo `npm run toolshop:conf
 
 ## Cómo se construyó
 
-Diseñé un flujo de agentes en Claude Code, una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero, cuatro validadores revisan en paralelo (**ROCK LEE** corre solo el escenario tocado, **SHIKAMARU** el alcance, **FURY** la seguridad, **KAKASHI** las buenas prácticas) y, si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces).
+La IA implementa, propone y revisa; yo decido qué se construye, detecto cuándo algo no es lo que quería y convierto los errores que se pueden repetir en reglas. La arquitectura de agentes viene de mi experiencia laboral y de estudiar distintos diseños de agentes, y sigue en evolución: faltan evals que midan a cada agente, skills y una evaluación cíclica para mejorarlos. La idea de las banderas `acceso` y `etapa` en los Ejemplos también es mía.
+
+El flujo trabaja una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero, cuatro validadores revisan en paralelo (**ROCK LEE** corre solo el escenario tocado, **SHIKAMARU** el alcance, **FURY** la seguridad, **KAKASHI** las buenas prácticas) y, si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces).
 
 La memoria vive en `brain/` (backlog con criterios, decisiones con su porqué y bitácora), las reglas en `CLAUDE.md`, y un hook (`.claude/hooks/guard.py`) bloquea acciones riesgosas y pide aprobación antes de publicar en GitHub.
 
-En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con un diagrama, las reglas y su porqué, cifras sacadas de `brain/` y seis problemas reales: cómo se detectaron y cómo se resolvieron.
+En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con un diagrama, las reglas y su porqué, cifras sacadas de `brain/` y ocho problemas reales: cómo se detectaron, cómo se resolvieron y qué aporté yo en cada uno.
 
 ## Próximas fases
 
-1. **GitHub Actions:** la suite corre en cada push y a demanda, con el reporte como artefacto.
-2. **Supabase:** historial de corridas.
-3. **Dashboard en Next.js:** lanzar corridas y ver resultados desde el navegador.
-4. **Docker:** imagen reproducible para correr igual en local y en CI.
+La meta es un sistema todo en uno: lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
+
+1. **Docker:** imagen reproducible para correr igual en local y en CI.
+2. **GitHub Actions:** la suite corre en cada push y a demanda, con el reporte como artefacto.
+3. **Supabase:** historial de corridas, autenticación y login.
+4. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
+5. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
+6. **Evals:** medir a cada agente con casos y resultados esperados.
+7. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.
