@@ -213,4 +213,4 @@
 ## 2026-11-19 · Rol del autor en la documentación
 - Pedido del usuario: el proceso debe mostrar su aporte, no solo lo que hizo la IA. `docs/proceso-con-ia.md`: sección "Mi rol", línea "Mi aporte" en cada caso, casos 7 (03-home sin sesión pese a 4 PASS) y 8 (banderas `acceso`/`etapa`, idea del usuario), próximos pasos con su visión (Docker, Actions, Supabase con auth, front en Vercel, agente LangGraph con API de Grok, evals y skills, demo propia). README: resumen y próximas fases alineados.
 - Datos del usuario: la arquitectura de agentes viene de su experiencia laboral y estudio; el sitio real se descartó como principal por riesgo de afectar sus métricas.
-- Pendiente: `brain/tasks.md` aún lista Docker como Fase 5 y no incluye el agente LangGraph.
+- `brain/tasks.md` alineado (2026-11-19): Fases 2–9 en el orden del usuario, P6 y P7 (API de Grok); D7 y la línea de fases de `CLAUDE.md` actualizadas.

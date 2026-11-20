@@ -1,7 +1,7 @@
 # Reglas del proyecto
 
 Proyecto: automatización QA de ecommerce. Suite principal en Toolshop (buscar → carrito → checkout completo con tarjetas de prueba, D14); smoke de solo lectura en reuse.cl (ver `brain/decisions.md` D12).
-Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futuras: GitHub Actions, Supabase, Next.js (v0 + Claude Design), Docker.
+Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futuras: Docker, GitHub Actions, Supabase (auth), front en Vercel (Next.js, v0 + Claude Design), agente LangGraph con API de Grok, evals y skills.
 
 ## Comunicación
 - Español, directo, sin relleno. Explica un tecnicismo en una frase la primera vez.

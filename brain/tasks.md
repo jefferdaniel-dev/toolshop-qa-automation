@@ -12,10 +12,11 @@ Cada herramienta se instala justo antes de la fase que la usa.
 |---|---|---|---|---|
 | P1 | `.env` con `BASE_URL=https://practicesoftwaretesting.com` (ver D12) y `TEST_USER_EMAIL`/`TEST_USER_PASSWORD` | usuario | Fase 1 | `done` |
 | P2 | Python (se usa el 3.15 instalado, ver D7) + Chromium de Playwright | — | Fase 1 | `done` |
-| P3 | Repo en GitHub (público): https://github.com/jefferdaniel-dev/toolshop-qa-automation | agente con `gh`, previa confirmación | Fase 2 | `done` |
-| P4 | Cuenta Supabase + conector Supabase en Claude | usuario | Fase 3 | `pending` |
-| P5 | Cuenta Vercel/v0 + conectores Vercel y v0 en Claude | usuario | Fase 4 | `pending` |
-| P6 | Docker Desktop (requiere admin y WSL2) | usuario | Fase 5 | `pending` |
+| P3 | Repo en GitHub (público): https://github.com/jefferdaniel-dev/toolshop-qa-automation | agente con `gh`, previa confirmación | Fase 3 | `done` |
+| P4 | Cuenta Supabase + conector Supabase en Claude | usuario | Fase 4 | `pending` |
+| P5 | Cuenta Vercel/v0 + conectores Vercel y v0 en Claude | usuario | Fase 5 | `pending` |
+| P6 | Docker Desktop (requiere admin y WSL2) | usuario | Fase 2 | `pending` |
+| P7 | API key gratuita de Grok en `.env` (sin valor real en `.env.example`) | usuario | Fase 6 | `pending` |
 
 Ya disponible: Git, Node/npm, GitHub CLI con sesión iniciada (scopes `repo`, `workflow`).
 
@@ -160,7 +161,12 @@ Criterio de aceptación:
 - Todo verificable contra `brain/log.md` y `brain/decisions.md`; nada inventado. Sin datos personales (nombre, correo), credenciales ni valores de `.env`. Diagrama en Mermaid (GitHub lo renderiza).
 
 ## Fases siguientes (se detallan al cerrar la anterior)
-- Fase 2: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto.
-- Fase 3: Supabase — tabla de corridas; el workflow guarda resultados; auth.
-- Fase 4: Dashboard Next.js — diseño con Claude Design (D5), dispara el workflow, historial, experiencia de espera (D6).
-- Fase 5: Docker — imagen reproducible para correr las pruebas local igual que en CI.
+Orden acordado con el usuario (2026-11-19). Meta: un sistema todo en uno para lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
+- Fase 2: Docker — imagen reproducible para correr las pruebas local igual que en CI.
+- Fase 3: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto, revisando que no publique capturas sensibles.
+- Fase 4: Supabase — tabla de corridas; el workflow guarda resultados; autenticación y login.
+- Fase 5: Front en Vercel (Next.js) — diseño con Claude Design (D5), lanzar una prueba con pasos simples, dispara el workflow, historial, experiencia de espera (D6).
+- Fase 6: Agente con LangGraph — usa la API gratuita de Grok para lanzar la prueba e interpretar el resultado.
+- Fase 7: Evals — medir a cada agente del flujo con casos y resultados esperados.
+- Fase 8: Skills y mejora cíclica — convertir partes del flujo en skills y volver a correr los evals para mejorarlos.
+- Fase 9: Demo propia de ecommerce — tienda pequeña para practicar sin riesgo sobre un sitio real.
