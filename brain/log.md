@@ -300,3 +300,12 @@
 
 ## 2026-11-25 · Validación proporcional
 - Pedido del usuario tras las muchas aprobaciones de T22: la regla de cuántos validadores corren queda en `CLAUDE.md` y prevalece sobre los pasos 7 y 9 de `/hiruzen`, cuyo archivo no se tocó.
+
+## 2026-11-25 · T23 abierta (Fase 3)
+- T22 y la regla de validación quedaron en el commit `ced7eb1`. El usuario definió: automático home y búsqueda; a demanda sin login; reporte Allure como artefacto 7 días; publicar por push y pull request. El login en CI y el escaneo de la imagen quedan para otra tarea.
+
+## 2026-11-25 · T23 validada en local (falta publicar)
+- PICCOLO: `.github/workflows/pruebas.yml`, imagen no root y fijada por digest, `.strip()` en el filtro, README, D4, D30. SHAs de las dos acciones y digest comprobados por el orquestador.
+- FURY, SHIKAMARU y KAKASHI PASS. FURY probó 247.000 expresiones con el evaluador de pytest: 0 seleccionan una fila con login (reportado por FURY). Corregida la frase del README sobre las capturas.
+- ROCK LEE dio FAIL porque el reporte de la corrida de 4 pruebas estaba vacío. Causa: Git Bash convierte `-v ./reports:/app/reports` en una ruta de Windows y el montaje se rompe (dejó una carpeta `reports;C`, vacía y borrada). Con `MSYS_NO_PATHCONV=1` el orquestador obtuvo 4 passed, 4 resultados y 10 capturas con uid 54321. No es defecto del producto ni de la prueba.
+- Pendiente: commit, push, pull request y primera corrida real en `ubuntu-24.04`. Observaciones de FURY sin corregir: `--cap-drop ALL`/`no-new-privileges`, `always()` frente a `!cancelled()`, grupo de concurrencia por evento, aprobación de forks y `sha_pinning_required`.

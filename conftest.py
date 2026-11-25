@@ -31,7 +31,8 @@ def pytest_configure(config):
 # `-v` is passed; a bare run (`--markers`) does not collect, so it is unaffected.
 def pytest_collection(session):
     options = session.config.option
-    if os.environ.get("RUNNING_IN_DOCKER") and not (options.markexpr or options.keyword):
+    has_filter = (options.markexpr or "").strip() or (options.keyword or "").strip()
+    if os.environ.get("RUNNING_IN_DOCKER") and not has_filter:
         raise pytest.UsageError(
             'Elige qué correr con -m <tag> o -k "<texto>", '
             'por ejemplo: -m search -k "Combination and Pliers".'

@@ -167,7 +167,17 @@ npm run toolshop:docker:build
 npm run toolshop:docker -- -m search -k "Combination and Pliers"
 ```
 
-Corre sin pantalla y deja los resultados y las capturas en `reports/` y `evidencias/` del proyecto; la imagen no lleva Node, así que el HTML se arma después en el PC con `npm run toolshop:report`. Sin argumentos no corre pruebas: solo lista los tags. Con otras opciones pero sin `-m` ni `-k` (por ejemplo solo `-v`) termina con error pidiendo elegir; con uno de los dos basta. Reportes y evidencias usan la hora de Bogotá. Con varias palabras en `-k` hay que unirlas con `and`.
+Corre sin pantalla y deja los resultados y las capturas en `reports/` y `evidencias/` del proyecto; la imagen no lleva Node, así que el HTML se arma después en el PC con `npm run toolshop:report`. Sin argumentos no corre pruebas: solo lista los tags. Con otras opciones pero sin `-m` ni `-k` (por ejemplo solo `-v`) termina con error pidiendo elegir; con uno de los dos basta. Reportes y evidencias usan la hora de Bogotá. Con varias palabras en `-k` hay que unirlas con `and`. `-k " "` y `-m " "` (solo espacios) cuentan como vacíos. El contenedor no corre como root (usuario 1000, o el que pases con `--user`), así que los archivos de `reports/` no quedan de root en Linux.
+
+### En GitHub Actions
+
+El workflow `.github/workflows/pruebas.yml` usa la misma imagen del `Dockerfile` y corre sin credenciales ni secretos (solo `BASE_URL`, pública).
+
+- **Automático** (push o pull request a `main`): home y búsqueda, `-k "test_home or test_buscar"` (4 pruebas).
+- **A demanda**: pestaña Actions, workflow "Pruebas", "Run workflow". Se elige el tag (`search`, `cart` o `compra`) y, si se quiere, un filtro (por ejemplo `Combination and Pliers`). Las filas con login nunca corren: el filtro se combina siempre con `not login`. El filtro solo admite letras, números, espacios y `_ . ( ) -`, con paréntesis balanceados.
+- **Resultado**: el job queda en rojo si falla una prueba y siempre sube el artefacto `reporte-allure` (un HTML, 7 días). Descárgalo desde la página de la corrida y ábrelo en el navegador.
+
+Aviso: este repositorio es público. Los artefactos los puede descargar cualquiera con una cuenta de GitHub, y los logs y el filtro que escribas también son públicos. No se suben las carpetas `evidencias/` ni `resultados/`, pero el HTML sí lleva las capturas (con datos sintéticos) y muestra rama, commit y URL de la corrida. Las pruebas con login no corren en CI.
 
 ## Cómo se construyó
 

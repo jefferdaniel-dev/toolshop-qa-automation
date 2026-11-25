@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: ninguna** (sigue definir con el usuario la Fase 3). T6 en pausa por decisión del usuario (2026-11-19).
+**Siguiente: T23.** T6 en pausa por decisión del usuario (2026-11-19).
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -214,9 +214,25 @@ Criterio de aceptación:
 - Sondas con claves y correos inventados en una copia aislada, sin login real, buscando en la consola, los resultados, los adjuntos y el HTML con base64 decodificado.
 - Actualizar D23, D25, D29 y README. Validación real: solo `-m search -k "Combination and Pliers"` en local y Docker.
 
+## Fase 3 — GitHub Actions
+
+### T23 · Workflow de CI y ejecución a demanda, sin login — `in_progress`
+Pedido y comportamiento confirmado con el usuario (2026-11-25). Ronda completa de validadores (CI y artefactos públicos).
+Criterio de aceptación:
+- `.github/workflows/pruebas.yml` corre en push a `main`, en pull request a `main` y a demanda (`workflow_dispatch`), usando la imagen del `Dockerfile` (igual que en local).
+- Automático (push y PR): home y búsqueda, con `-k "test_home or test_buscar"` (4 pruebas). Sin credenciales.
+- A demanda: se elige el tag (`search`, `cart` o `compra`) y un filtro opcional. Las filas con login nunca corren (`not login`). Ningún valor de entrada se interpola en un `run`: entra por variables de entorno y entre comillas.
+- Sin secretos en GitHub. `BASE_URL` es una variable de entorno del workflow; no se usa `.env`.
+- Reporte Allure (HTML único) como artefacto, también si fallan las pruebas, con retención de 7 días. `evidencias/` y `resultados/` no se suben. El job queda en rojo si falla una prueba.
+- Permisos mínimos (`contents: read`), `pull_request` (nunca `pull_request_target`), acciones de terceros fijadas por SHA con el tag en un comentario, `persist-credentials: false`, runner fijado (`ubuntu-24.04`), límite de tiempo y cancelación de corridas repetidas de la misma rama.
+- El contenedor no corre como root y el reporte y los montajes funcionan en Linux y en Windows. Imagen base fijada por digest.
+- `-k " "` y `-m " "` cuentan como sin filtro: no corren pruebas en el contenedor.
+- Los filtros, el hook y el uso local (`npm run toolshop:docker*`, `toolshop:report`) siguen igual.
+- README: cómo se ve y se lanza, y el aviso de que los artefactos de un repo público los puede bajar cualquiera con cuenta. D4, D30 y lo que cambie en decisiones.
+- Validación local: `-m search -k "Combination and Pliers"` en local y Docker, y el comando automático en Docker con el mismo usuario no root (4 pruebas, sin login); el workflow se valida con un linter de Actions si está disponible sin instalar nada, y si no, por lectura. La corrida real en GitHub se hace al publicar, con aprobación del usuario (push y PR).
+
 ## Fases siguientes (se detallan al cerrar la anterior)
 Orden acordado con el usuario (2026-11-19). Meta: un sistema todo en uno para lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
-- Fase 3: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto, revisando que no publique capturas sensibles.
 - Fase 4: Supabase — tabla de corridas; el workflow guarda resultados; autenticación y login.
 - Fase 5: Front en Vercel (Next.js) — diseño con Claude Design (D5), lanzar una prueba con pasos simples, dispara el workflow, historial, experiencia de espera (D6).
 - Fase 6: Agente con LangGraph — usa la API gratuita de Grok para lanzar la prueba e interpretar el resultado.
