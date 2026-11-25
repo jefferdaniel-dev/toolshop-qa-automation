@@ -281,3 +281,22 @@
 ## 2026-11-25 · T22 abierta
 - El usuario definió: ocultar contraseña y correo en consola y reporte; ocultar la ruta local solo en el reporte; el hook bloquea las opciones que encontró FURY; y si el hook no puede arrancar, el comando se niega.
 - T22: con el hook roto se pasó de "negar todo" a prevención más modo degradado (leer sí, reparar el hook con aprobación, lo demás no), para no dejar al agente sin herramientas.
+
+## 2026-11-25 · T22 intento 1 (FAIL)
+- PICCOLO: `tests/redaction.py`, redacción en consola y reporte, `type=password` antes de escribir; `guard.py` pasa a lanzador y las reglas a `guard_rules.py`, con prevención y modo degradado; `settings.json` sin cambios. Las sondas de `--tb` inseguros las lanzó desde un script, en copia con clave inventada, porque el hook los niega en la línea de comandos.
+- El orquestador comprobó: clave y correo inventados 0 veces en consola, resultados y adjuntos; modo degradado con 4 formas de rotura; 22 casos nuevos del hook; tablas de T20 en 0. Las 3 capturas se ven en el HTML.
+- ROCK LEE, SHIKAMARU y KAKASHI PASS. FURY (cortada una vez por el límite de uso, retomada) FAIL: F1 un `print` al cargar las reglas contamina el JSON del modo degradado; F2 tipos inesperados hacen salir al lanzador sin decisión; F3 formas escapadas no cubiertas (comilla simple escapada y JSON en ASCII). 0 debilitamientos frente a `HEAD` en 300.000 comandos, reportado por FURY.
+- JUEZ (T22 intento 1): culpa PRUEBA; F1, F2 y F3 válidos. Corrección solo en el lanzador y en `tests/redaction.py`, un nivel de escape; cuelgue y `os._exit` de las reglas quedan como límite. Incidente de proceso: PICCOLO llegó por un script a `--tb=long`, que el hook niega en la línea de comandos. Reintento 1.
+- `git restore .claude/hooks/guard_rules.py` solo sirve desde el primer commit que incluya ese archivo; ese commit debe llevar también `guard.py` y `tests/redaction.py`.
+
+## 2026-11-25 · T22 done
+- Reintento 1 (PICCOLO): el lanzador descarta lo que impriman las reglas al cargar y niega ante tipos inesperados; `tests/redaction.py` cubre siete escapes. `guard_rules.py` no cambió en el reintento.
+- Archivos de T22: `.claude/hooks/guard.py`, `.claude/hooks/guard_rules.py`, `tests/redaction.py`, `tests/allure_privacy.py`, `conftest.py`, `tests/steps/test_purchase.py`, README, D23, D25, D29.
+- Validadores en el reintento: FURY PASS (F1, F2 y F3 cerrados; 243 cargas contra `HEAD`, 0 debilitadas), ROCK LEE PASS (local y Docker reconstruido, 1 passed cada uno), SHIKAMARU PASS, KAKASHI PASS (con D25 y D29).
+- El orquestador repitió por su cuenta F1, F2 y F3, los 22 casos del hook y las tablas de T20: sin desajustes.
+- Sin probar: login y compra reales, un fallo real contra Toolshop, cómo reacciona Claude Code ante cada salida del hook (solo stdin y documentación), y el cuelgue u `os._exit` de las reglas.
+- Observaciones abiertas, anteriores a T22: `Read` con punto final (`.env.`) y los globs `**/.e*` y `.[e]nv` no se niegan (FURY, sin probar contra el archivo real); rutas con separador doble (`.claude//hooks`) no activan la regla de configuración; las variantes `DEBUG` con espacio, `${env:DEBUG}` y `pytest ... 2>&1 --tb=auto` pasan.
+- Para la Fase 3: contenedor como root, base sin digest, `-k " "`, carpetas `_all` vacías, rama y commit en el HTML, correo demo en la captura de login.
+
+## 2026-11-25 · Validación proporcional
+- Pedido del usuario tras las muchas aprobaciones de T22: la regla de cuántos validadores corren queda en `CLAUDE.md` y prevalece sobre los pasos 7 y 9 de `/hiruzen`, cuyo archivo no se tocó.

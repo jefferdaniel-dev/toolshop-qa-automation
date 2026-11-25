@@ -105,9 +105,9 @@ def required_env(name: str) -> str:
 
 
 def log_in(login: LoginPage, evidence):
-    login.fill(required_env("TEST_USER_EMAIL"), required_env("TEST_USER_PASSWORD"))
-    # The screenshot must not reveal the password.
+    # Checked before typing: the screenshot must not reveal the password.
     expect(login.password).to_have_attribute("type", "password")
+    login.fill(required_env("TEST_USER_EMAIL"), required_env("TEST_USER_PASSWORD"))
     evidence.capture("login")
     expect_status(login.submit(), 200)
 

@@ -11,7 +11,7 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 - **Esperas por la API, no por tiempo.** Cada acción que dispara una petición espera la respuesta de la API correspondiente y verifica su status. Sin `sleep` ni reintentos como parche.
 - **Locators estables.** Test-id (`data-test`), rol o texto; nada de XPath ni clases de estilo.
 - **Evidencia por paso.** Cada escenario guarda una captura por pantalla; la carpeta de una compra exitosa lleva el número de factura.
-- **Credenciales seguras.** El usuario de prueba sale de variables de entorno; nunca se imprime y la contraseña sale enmascarada en las capturas.
+- **Credenciales seguras.** El usuario de prueba sale de variables de entorno; la contraseña sale enmascarada en las capturas (el login lo comprueba antes de escribirla) y, si una prueba falla, la contraseña y el correo salen como `***` en la consola y en el reporte.
 - **Hallazgos documentados.** La suite encontró tres comportamientos del sitio que vale la pena reportar (ver más abajo).
 
 ## Stack
@@ -121,7 +121,7 @@ Cada corrida deja sus resultados en `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>/
 npm run toolshop:report
 ```
 
-Arma, en el PC, un HTML único y en español de la última corrida en `reports/<corrida>/informe/index.html`, que se abre con doble clic. Cada escenario muestra sus pasos en Gherkin con las capturas adjuntas al paso que las tomó, y la fila de `Ejemplos`; si falla, también la captura del momento (que además queda en `test-results/`). El reporte no muestra los argumentos de los pasos ni el nombre del equipo, y reemplaza por `***` el valor de `TEST_USER_PASSWORD` en los mensajes de error (una clave que no esté en esa variable no se redacta ahí). Tampoco hace peticiones a internet: se le quita la analítica de Google que Allure incluye. Usa los colores de Tokyo Night (`scripts/tokyo-night.css`) y abre siempre oscuro, aunque el sistema esté en modo claro. No se guarda trace ni video. `reports/` y `test-results/` están fuera de git.
+Arma, en el PC, un HTML único y en español de la última corrida en `reports/<corrida>/informe/index.html`, que se abre con doble clic. Cada escenario muestra sus pasos en Gherkin con las capturas adjuntas al paso que las tomó, y la fila de `Ejemplos`; si falla, también la captura del momento (que además queda en `test-results/`). El reporte no muestra los argumentos de los pasos ni el nombre del equipo, y reemplaza por `***` los valores de `TEST_USER_PASSWORD` y `TEST_USER_EMAIL` en mensajes, trazas y adjuntos de texto, y también en la consola de pytest (una clave que no esté en esas variables no se redacta, ni lo que se imprima con `-s`); en el reporte la ruta local del proyecto queda relativa. Tampoco hace peticiones a internet: se le quita la analítica de Google que Allure incluye. Usa los colores de Tokyo Night (`scripts/tokyo-night.css`) y abre siempre oscuro, aunque el sistema esté en modo claro. No se guarda trace ni video. `reports/` y `test-results/` están fuera de git.
 
 ## Hallazgos de QA en Toolshop
 
@@ -175,7 +175,7 @@ La IA implementa, propone y revisa; yo decido qué se construye, detecto cuándo
 
 El flujo trabaja una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero, cuatro validadores revisan en paralelo (**ROCK LEE** corre solo el escenario tocado, **SHIKAMARU** el alcance, **FURY** la seguridad, **KAKASHI** las buenas prácticas) y, si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces).
 
-La memoria vive en `brain/` (backlog con criterios, decisiones con su porqué y bitácora), las reglas en `CLAUDE.md`, y un hook (`.claude/hooks/guard.py`) bloquea acciones riesgosas y pide aprobación antes de publicar en GitHub.
+La memoria vive en `brain/` (backlog con criterios, decisiones con su porqué y bitácora), las reglas en `CLAUDE.md`, y un hook (`.claude/hooks/guard.py` lanza las reglas de `guard_rules.py`) bloquea acciones riesgosas y pide aprobación antes de publicar en GitHub; si las reglas no cargan, solo deja leer y buscar, y reparar `guard_rules.py` con aprobación.
 
 En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con un diagrama, las reglas y su porqué, cifras sacadas de `brain/` y ocho problemas reales: cómo se detectaron, cómo se resolvieron y qué aporté yo en cada uno.
 

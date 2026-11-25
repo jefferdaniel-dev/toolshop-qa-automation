@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: T22.** Después, Fase 3. T6 en pausa por decisión del usuario (2026-11-19).
+**Siguiente: ninguna** (sigue definir con el usuario la Fase 3). T6 en pausa por decisión del usuario (2026-11-19).
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -196,7 +196,7 @@ Criterio de aceptación:
 - Los filtros del contenedor y las opciones bloqueadas por el hook siguen igual. Actualizar D24, D29 y README (stack, reporte, comandos, Docker).
 - Validación: `-m search -k "Combination and Pliers"` en local y en Docker, más la sonda de fuga. Sin login ni compra.
 
-### T22 · Cerrar fugas fuera del reporte y endurecer el hook — `pending`
+### T22 · Cerrar fugas fuera del reporte y endurecer el hook — `done`
 Origen: observaciones de FURY y JUEZ en T20 y T21. Comportamiento confirmado con el usuario (2026-11-25).
 Criterio de aceptación:
 - Al fallar una prueba, los valores de `TEST_USER_PASSWORD` y `TEST_USER_EMAIL` salen como `***` en la consola de pytest y en los textos del reporte (mensajes, trazas y adjuntos de texto), en todas sus formas escapadas. El correo sigue visible en la captura `login` (D23). Variable ausente, vacía o solo espacios: sin cambios ni error.
@@ -206,7 +206,8 @@ Criterio de aceptación:
 - Hook roto, sin dejar al agente encerrado (acordado con el usuario, 2026-11-25):
   - Prevención: una edición con Edit o Write que deje `guard.py` (o el lanzador) con error de sintaxis se niega, comprobando el contenido resultante antes de guardar. El archivo vigente no cambia.
   - Modo degradado: un lanzador pequeño arranca `guard.py`; si no puede, se permite leer y buscar (salvo `.env`), editar solo `guard.py` pide aprobación, y todo lo demás (comandos y otras ediciones) se niega con un mensaje que dice la causa y cómo repararlo (`git restore .claude/hooks/guard.py` en la terminal del usuario).
-  - Antes de construirlo, comprobar cómo trata Claude Code cada código de salida del hook y si `ask` llega a mostrarse en modo automático; si no se muestra, editar `guard.py` en modo degradado también se niega. La comprobación no puede dejar el hook real roto: se hace con copias o por stdin.
+  - Comprobado en la documentación oficial (code.claude.com/docs/en/hooks y permission-modes, 2026-11-25): salida 2 bloquea, cualquier otro error deja pasar la acción, y un `ask` de PreToolUse va a la solicitud de permiso sin que decida el clasificador del modo automático. Los hooks también aplican a subagentes.
+  - Diseño: `guard.py` queda como lanzador y las reglas pasan a `guard_rules.py`; `settings.json` no cambia. Donde arriba dice `guard.py` como archivo de reglas, se entiende `guard_rules.py`. Ninguna prueba deja el hook real roto: copias o stdin.
   - Límite aceptado: si falta `py -3.15` o se rompe el propio lanzador, repara el usuario.
   - Tocar `.claude/` pide la aprobación del usuario.
 - El hook se prueba por stdin, sin ejecutar los comandos de ejemplo: primero los casos que hoy pasan, luego los mismos bloqueados; las tablas de T20 siguen con 0 desajustes y ninguna decisión se debilita frente a `HEAD`.

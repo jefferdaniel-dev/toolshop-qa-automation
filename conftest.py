@@ -7,6 +7,7 @@ import pytest
 
 from tests.allure_privacy import AllurePrivacy
 from tests.naming import slug
+from tests.redaction import redact_report
 
 
 # Lives at the project root because tests/conftest.py is not loaded yet when
@@ -35,3 +36,21 @@ def pytest_collection(session):
             'Elige qué correr con -m <tag> o -k "<texto>", '
             'por ejemplo: -m search -k "Combination and Pliers".'
         )
+
+
+# These wrappers run `trylast`, so their code after the yield runs before the
+# one of Allure's listener and before the terminal reads the report: the
+# console, the "short test summary" and the text attachments all see the
+# redacted report.
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtest_makereport(item, call):
+    report = yield
+    redact_report(report)
+    return report
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_make_collect_report(collector):
+    report = yield
+    redact_report(report)
+    return report

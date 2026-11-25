@@ -16,6 +16,15 @@ Stack: Python 3.15 (`.venv`), Playwright, pytest-bdd (Gherkin), POM. Fases futur
 - Al validar se corre solo el escenario que se tocó, elegido con `-m <tag> -k "<texto de la fila>"`, sin comentar filas del `.feature`. Más de uno solo si la validación lo exige (p. ej. dos tipos de acceso seguidos), diciendo por qué. La suite completa solo si el usuario la pide.
 - Al terminar: actualizar estado en `brain/tasks.md` y agregar entrada en `brain/log.md`.
 
+## Validación proporcional
+Prevalece sobre los pasos 7 y 9 de `/hiruzen` (decisión del usuario, 2026-11-25).
+- Ronda completa (ROCK LEE, SHIKAMARU, FURY, KAKASHI) si el cambio toca el hook, credenciales, Docker, CI o lo que se publique (reportes, logs). FURY y ROCK LEE nunca se omiten ahí.
+- En los demás cambios con código: ROCK LEE y uno más, el que corresponda al riesgo. Si solo cambia documentación: SHIKAMARU o KAKASHI.
+- En un reintento repite quien dio FAIL y ROCK LEE si cambió algo que se ejecuta. Si el arreglo toca más archivos de los que dictó JUEZ, vuelve la ronda que correspondía.
+- El orquestador siempre compara el informe con el diff y la salida real; no repite pruebas que ya corrió un validador, salvo que algo no cuadre o haya que confirmar un FAIL.
+- Antes de empezar una tarea que vaya a pedir aprobaciones al usuario, avisarle cuántas se esperan y por qué.
+- La lista de permisos de `settings.json` no se amplía para reducir solicitudes.
+
 ## Grabaciones con codegen
 - Los flujos de UI parten de una grabación del usuario con `playwright codegen`, guardada en `recordings/<id-tarea>.py`.
 - La grabación es insumo, no código final: se convierte a POM + steps. Nunca se importa ni se copia tal cual.
