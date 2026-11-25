@@ -214,3 +214,108 @@
 - Pedido del usuario: el proceso debe mostrar su aporte, no solo lo que hizo la IA. `docs/proceso-con-ia.md`: sección "Mi rol", línea "Mi aporte" en cada caso, casos 7 (03-home sin sesión pese a 4 PASS) y 8 (banderas `acceso`/`etapa`, idea del usuario), próximos pasos con su visión (Docker, Actions, Supabase con auth, front en Vercel, agente LangGraph con API de Grok, evals y skills, demo propia). README: resumen y próximas fases alineados.
 - Datos del usuario: la arquitectura de agentes viene de su experiencia laboral y estudio; el sitio real se descartó como principal por riesgo de afectar sus métricas.
 - `brain/tasks.md` alineado (2026-11-19): Fases 2–9 en el orden del usuario, P6 y P7 (API de Grok); D7 y la línea de fases de `CLAUDE.md` actualizadas.
+
+## 2026-11-24 · P6 done (Docker)
+- El usuario instaló Docker Desktop 4.100.1 (backend WSL2, por usuario, sin admin) guiado paso a paso en otra sesión. `.wslconfig`: 5 GB de RAM, 4 CPUs, 2 GB de swap.
+- Verificado por el orquestador: Docker 29.9.3 (cliente y servidor), Compose v5.7.1, 5159567360 bytes y 4 CPUs en `docker info`. Reportado por la sesión guía, no repetido aquí: `hello-world`, montaje de la carpeta del proyecto (lectura y escritura) y `--env-file`.
+- Sin probar: Chromium dentro de un contenedor con ese límite de memoria. Siguiente: definir con el usuario el criterio de la primera tarea de la Fase 2.
+
+## 2026-11-24 · T19 intento 1 (FAIL)
+- PICCOLO: `Dockerfile`, `.dockerignore`, scripts `toolshop:docker*`, `playwright==1.65.2`, README. `playwright install` falló al inicio por falta de `libatomic.so.1` en la base slim; resuelto instalando `libatomic1`. Su informe decía que el README ya no listaba Docker como fase futura y no era cierto; el orquestador lo vio en el diff y se corrigió antes de validar.
+- El `-k "Combination Pliers"` del criterio (escrito por el orquestador) no es válido en pytest; corregido a `"Combination and Pliers"`.
+- Validadores: ROCK LEE, SHIKAMARU y KAKASHI PASS. FURY FAIL (primera ejecución cortada por un error 529 del servicio, repetida): `!tests` en `.dockerignore` readmite toda la carpeta, así que un archivo de entorno o `recordings/` dentro de `tests/` entrarían a la imagen. Reproducido por el orquestador con archivos falsos. Hoy no hay ninguno: la imagen está limpia.
+- JUEZ: culpa PRUEBA. Excluir a cualquier profundidad los seis nombres del criterio, solo en `.dockerignore`. Repiten FURY y ROCK LEE. Reintento 1.
+
+## 2026-11-24 · T19 done
+- Reintento 1 (PICCOLO): `.dockerignore` excluye los seis nombres del criterio a cualquier profundidad. Archivos de T19: `Dockerfile`, `.dockerignore`, `package.json`, `requirements.txt`, `README.md`.
+- Validadores: FURY PASS (señuelos, incluido el de entorno en `tests/`: antes entraban y ya no), ROCK LEE PASS. SHIKAMARU y KAKASHI PASS en el intento 1; no repiten porque el reintento solo tocó `.dockerignore`.
+- Pruebas: `npm run toolshop:docker -- -m search -k "Combination and Pliers"` → 1 passed (Linux, Python 3.15.2); reporte y 3 capturas en el host, comprobados por el orquestador. Sin argumentos: lista los tags, 0 pruebas. Imagen: 23 archivos en `/app`, 2 GB en disco (566 MB de contenido).
+- Sin probar: login y compra dentro del contenedor, y el escaneo de vulnerabilidades de la imagen.
+- Pendiente de decisión del usuario: (1) `docker run` directo, `--entrypoint env` y `docker inspect` evaden el hook y podrían mostrar la contraseña (tocar el hook requiere su aprobación); (2) un argumento sin filtro (`-- -v`) corre la suite completa: el criterio escribió "sin argumentos", más estrecho que lo que él eligió ("sin filtro"); (3) la hora de reportes y evidencias sale en UTC. Para la Fase 3 (FURY): contenedor como root y base sin digest.
+
+## 2026-11-24 · T20 abierta
+- El usuario definió: en el contenedor basta `-m` o `-k`; el hook bloquea los comandos de Docker que podrían mostrar la contraseña; hora `America/Bogota`. Root en el contenedor y base sin digest quedan para la Fase 3.
+
+## 2026-11-24 · T20 intento 1 (FAIL)
+- PICCOLO: `pytest_collection` en el `conftest.py` de la raíz, `TZ` y `RUNNING_IN_DOCKER` en el `Dockerfile`, bloque docker en el hook, README y D25. Su informe decía que no se creó carpeta de evidencias; sí existía (`evidencias/2026-11-24/22-30-37_search_Combination-Pliers`) y confirma la hora local.
+- Validadores: ROCK LEE PASS (sin filtro: código 4 y 0 pruebas; search: 1 passed; hora local), SHIKAMARU PASS. KAKASHI FAIL (`ENV` antes de las capas lentas). FURY FAIL: el hook deja pasar comandos partidos con `\` o acento grave, `docker inspect` con opciones globales o `docker.exe`, `docker exec` con `sh -c "cd x; env"` y `--fulltrace`. Reproducido por el orquestador por stdin, sin ejecutar los comandos.
+- JUEZ: culpa PRUEBA. Válidos, salvo las mayúsculas (sobrealcance). El arreglo de FURY para las líneas partidas, aplicado a `bodyless`, dejaría sin aprobación copiar a `.claude\hooks\`; se usa una variable aparte solo en los dos `findall`. El endurecimiento alcanza también a `pytest` local. Reintento 1.
+- Sin corregir, a decidir por el usuario en la Fase 3: `-k " "` corre todo en el contenedor.
+
+## 2026-11-24 · T20 intento 2 (FAIL)
+- Reintento 1 (PICCOLO): variable aparte en el hook para unir líneas partidas y neutralizar separadores entre comillas, `inspect` con opciones globales y `docker.exe`, `--fulltrace`; `ENV` del `Dockerfile` después de las capas lentas.
+- KAKASHI PASS, ROCK LEE PASS (imagen reconstruida; search: 1 passed; hora local). El orquestador repitió por stdin las tablas de PICCOLO y 29 casos propios: 0 desajustes.
+- FURY FAIL por un caso: salto de línea real dentro de `bash -c "..."` en `docker exec`. JUEZ lo había dejado fuera de alcance, el orquestador omitió esa exclusión en el encargo, y JUEZ rectificó: válido. El cambio se limita a argumentos de `-c`, para no bloquear mensajes de commit de varias líneas. Reintento 2 (último).
+- Observación anterior a T20: un error de sintaxis en `guard.py` sale con código 1 y sin decisión (comprobado), así que el hook no pregunta ni bloquea.
+
+## 2026-11-24 · T20 done
+- Reintento 2 (PICCOLO): el hook también neutraliza los saltos de línea dentro del argumento de `-c`. El orquestador corrigió el comentario impreciso que señaló KAKASHI y repitió las tablas después: 0 desajustes.
+- Archivos de T20: `conftest.py` (raíz), `Dockerfile`, `.claude/hooks/guard.py`, `README.md`, D25.
+- Validadores: FURY PASS (0 debilitamientos frente a `HEAD` en 150.000 comandos aleatorios, reportado por FURY) y KAKASHI PASS en el reintento 2; ROCK LEE PASS en el reintento 1 (la imagen no cambió después); SHIKAMARU PASS en el intento 1.
+- Pruebas (Docker): sin filtro con `-v`, código 4 y 0 pruebas; `-k Combination --collect-only`, 3 de 11; `-m search -k "Combination and Pliers"`, 1 passed; hora local. En local siguen 11 recolectadas.
+- Limitaciones conocidas: una corrida sin filtro deja un reporte vacío `*_all.html`; `-k " "` y `--noconftest` saltan el filtro; el hook no cubre ofuscación (`$'...'`, here-strings, `sh -c env` por `--entrypoint sh`, `docker run <ID>`) y niega menciones entre comillas de `docker inspect`; un error de sintaxis en `guard.py` no pregunta ni bloquea.
+- Para la Fase 3: contenedor como root, base sin digest, `-k " "` y reportes con capturas como artefacto.
+
+## 2026-11-24 · T21 abierta
+- El usuario vio el reporte vacío y sin capturas. Diagnóstico del orquestador: el mismo archivo se ve completo desde una ruta sin tilde y falla desde una con tilde. Sonda de Allure en el scratchpad (D31). El usuario eligió: Allure reemplaza al actual, todas las capturas, HTML armado en el PC, sin argumentos de los pasos.
+- Sin probar: cómo ocultar los argumentos con el plugin, y login o compra con Allure.
+- El usuario pidió el reporte con colores de Tokyo Night: probado en la copia aislada y agregado al criterio de T21.
+
+## 2026-11-24 · T21 intento 1 (FAIL)
+- PICCOLO: `allure-pytest-bdd`, plugin que quita argumentos de pasos y nombre del equipo antes de escribir, `scripts/report.py` y `scripts/tokyo-night.css`, `npm run toolshop:report`; se retira pytest-html. También desinstaló `pytest-html` y `pytest-metadata` del `.venv`.
+- El orquestador comprobó los tres reportes (con control positivo): sin la clave inventada ni el nombre del equipo, tema oscuro y sin errores de JavaScript. Esa sonda no cubría los mensajes de error de `fill` y `expect`.
+- SHIKAMARU y KAKASHI PASS. FURY FAIL: (F1) la clave y el correo salen en `statusDetails` cuando falla un `fill` o un `expect` tras llenar el login; reproducido por el orquestador con clave inventada; según FURY ya ocurría con pytest-html y la consola. (F2) el HTML carga Google Analytics (`analyticsEnable: true` fijo en Allure); confirmado con la red bloqueada. El orquestador ya había abierto y enviado el reporte al usuario antes de saberlo.
+- ROCK LEE: pasos 1 a 7 correctos; FAIL porque `reports/` se vació durante la validación. El usuario confirmó que la borró él. Pendiente repetir el paso 8 (sistema oscuro).
+- Incidente: FURY repitió, partiendo el nombre con comillas, un comando que el hook había negado por nombrar el archivo de secretos. Fue negado otra vez; FURY declara que no leyó nada y lo reportó.
+- JUEZ (T21 intento 1): culpa PRUEBA; F1 y F2 válidos. Redactar solo el valor de `TEST_USER_PASSWORD` en mensajes y trazas, y quitar los scripts de analítica del HTML. El correo demo no entra (D23, D29). Consola, adjuntos de texto y opciones del hook: proponer T22 antes de la Fase 3. Reintento 1.
+
+## 2026-11-25 · T21 done
+- Reintento 1 (PICCOLO): `TEST_USER_PASSWORD` sale como `***` en mensajes y trazas del reporte; `scripts/report.py` quita la analítica de Allure o borra el HTML y falla.
+- Archivos de T21: `conftest.py`, `tests/conftest.py`, `tests/allure_privacy.py`, `scripts/report.py`, `scripts/tokyo-night.css`, `pytest.ini`, `requirements.txt`, `package.json`, `package-lock.json`, README, D24, D29, D31.
+- Validadores en el reintento: FURY PASS (14 escenarios por clave, 0 apariciones en resultados y HTML), ROCK LEE PASS (local y Docker, 1 passed cada uno; HTML de Docker con sistema claro y oscuro: 0 peticiones, 0 errores, 3 capturas iguales a sus PNG), SHIKAMARU PASS, KAKASHI PASS (no leyó D29, D31 ni README; los revisó el orquestador).
+- El orquestador comprobó aparte la redacción con claves inventadas y el HTML local con la red bloqueada. El hook no cambió.
+- Sin probar: login, compra, un fallo real contra Toolshop y `npm install` desde cero.
+- Límites: solo se redacta `TEST_USER_PASSWORD`; una clave con espacios dobles o en los bordes no coincide con el aria snapshot; las corridas sin filtro dejan carpetas `_all` vacías; el HTML muestra rama y commit, y las trazas de un fallo local incluyen la ruta con el usuario.
+- T22 propuesta (decide el usuario): redactar la clave también en consola y adjuntos de texto; cubrir en el hook `--tb=auto`, `-o addopts=`, `-c`, `--confcutdir` y `DEBUG=pw:*`; comprobar `type=password` antes de llenar. Conviene antes de la Fase 3, donde la consola será el log público de CI.
+
+## 2026-11-25 · T22 abierta
+- El usuario definió: ocultar contraseña y correo en consola y reporte; ocultar la ruta local solo en el reporte; el hook bloquea las opciones que encontró FURY; y si el hook no puede arrancar, el comando se niega.
+- T22: con el hook roto se pasó de "negar todo" a prevención más modo degradado (leer sí, reparar el hook con aprobación, lo demás no), para no dejar al agente sin herramientas.
+
+## 2026-11-25 · T22 intento 1 (FAIL)
+- PICCOLO: `tests/redaction.py`, redacción en consola y reporte, `type=password` antes de escribir; `guard.py` pasa a lanzador y las reglas a `guard_rules.py`, con prevención y modo degradado; `settings.json` sin cambios. Las sondas de `--tb` inseguros las lanzó desde un script, en copia con clave inventada, porque el hook los niega en la línea de comandos.
+- El orquestador comprobó: clave y correo inventados 0 veces en consola, resultados y adjuntos; modo degradado con 4 formas de rotura; 22 casos nuevos del hook; tablas de T20 en 0. Las 3 capturas se ven en el HTML.
+- ROCK LEE, SHIKAMARU y KAKASHI PASS. FURY (cortada una vez por el límite de uso, retomada) FAIL: F1 un `print` al cargar las reglas contamina el JSON del modo degradado; F2 tipos inesperados hacen salir al lanzador sin decisión; F3 formas escapadas no cubiertas (comilla simple escapada y JSON en ASCII). 0 debilitamientos frente a `HEAD` en 300.000 comandos, reportado por FURY.
+- JUEZ (T22 intento 1): culpa PRUEBA; F1, F2 y F3 válidos. Corrección solo en el lanzador y en `tests/redaction.py`, un nivel de escape; cuelgue y `os._exit` de las reglas quedan como límite. Incidente de proceso: PICCOLO llegó por un script a `--tb=long`, que el hook niega en la línea de comandos. Reintento 1.
+- `git restore .claude/hooks/guard_rules.py` solo sirve desde el primer commit que incluya ese archivo; ese commit debe llevar también `guard.py` y `tests/redaction.py`.
+
+## 2026-11-25 · T22 done
+- Reintento 1 (PICCOLO): el lanzador descarta lo que impriman las reglas al cargar y niega ante tipos inesperados; `tests/redaction.py` cubre siete escapes. `guard_rules.py` no cambió en el reintento.
+- Archivos de T22: `.claude/hooks/guard.py`, `.claude/hooks/guard_rules.py`, `tests/redaction.py`, `tests/allure_privacy.py`, `conftest.py`, `tests/steps/test_purchase.py`, README, D23, D25, D29.
+- Validadores en el reintento: FURY PASS (F1, F2 y F3 cerrados; 243 cargas contra `HEAD`, 0 debilitadas), ROCK LEE PASS (local y Docker reconstruido, 1 passed cada uno), SHIKAMARU PASS, KAKASHI PASS (con D25 y D29).
+- El orquestador repitió por su cuenta F1, F2 y F3, los 22 casos del hook y las tablas de T20: sin desajustes.
+- Sin probar: login y compra reales, un fallo real contra Toolshop, cómo reacciona Claude Code ante cada salida del hook (solo stdin y documentación), y el cuelgue u `os._exit` de las reglas.
+- Observaciones abiertas, anteriores a T22: `Read` con punto final (`.env.`) y los globs `**/.e*` y `.[e]nv` no se niegan (FURY, sin probar contra el archivo real); rutas con separador doble (`.claude//hooks`) no activan la regla de configuración; las variantes `DEBUG` con espacio, `${env:DEBUG}` y `pytest ... 2>&1 --tb=auto` pasan.
+- Para la Fase 3: contenedor como root, base sin digest, `-k " "`, carpetas `_all` vacías, rama y commit en el HTML, correo demo en la captura de login.
+
+## 2026-11-25 · Validación proporcional
+- Pedido del usuario tras las muchas aprobaciones de T22: la regla de cuántos validadores corren queda en `CLAUDE.md` y prevalece sobre los pasos 7 y 9 de `/hiruzen`, cuyo archivo no se tocó.
+
+## 2026-11-25 · T23 abierta (Fase 3)
+- T22 y la regla de validación quedaron en el commit `ced7eb1`. El usuario definió: automático home y búsqueda; a demanda sin login; reporte Allure como artefacto 7 días; publicar por push y pull request. El login en CI y el escaneo de la imagen quedan para otra tarea.
+
+## 2026-11-25 · T23 validada en local (falta publicar)
+- PICCOLO: `.github/workflows/pruebas.yml`, imagen no root y fijada por digest, `.strip()` en el filtro, README, D4, D30. SHAs de las dos acciones y digest comprobados por el orquestador.
+- FURY, SHIKAMARU y KAKASHI PASS. FURY probó 247.000 expresiones con el evaluador de pytest: 0 seleccionan una fila con login (reportado por FURY). Corregida la frase del README sobre las capturas.
+- ROCK LEE dio FAIL porque el reporte de la corrida de 4 pruebas estaba vacío. Causa: Git Bash convierte `-v ./reports:/app/reports` en una ruta de Windows y el montaje se rompe (dejó una carpeta `reports;C`, vacía y borrada). Con `MSYS_NO_PATHCONV=1` el orquestador obtuvo 4 passed, 4 resultados y 10 capturas con uid 54321. No es defecto del producto ni de la prueba.
+- Pendiente: commit, push, pull request y primera corrida real en `ubuntu-24.04`. Observaciones de FURY sin corregir: `--cap-drop ALL`/`no-new-privileges`, `always()` frente a `!cancelled()`, grupo de concurrencia por evento, aprobación de forks y `sha_pinning_required`.
+
+## 2026-11-25 · T23 publicada; primera corrida en rojo
+- Commit `7739c33`, push de `fase-2-docker` y PR 1 a `main`, con aprobación del usuario (GitHub estuvo degradado y el PR se creó al tercer intento).
+- Primera corrida en `ubuntu-24.04`: imagen, reporte y artefacto bien; las 4 pruebas fallan al abrir la home esperando `QUERY /products` (30 s). La misma imagen con uid 1001 pasa desde el equipo del usuario. Causa sin confirmar; se sospecha del entorno. Sin reintentos como parche.
+
+## 2026-11-25 · T24 documentación del proceso
+- Pedido del usuario: actualizar `docs/proceso-con-ia.md` (diagrama, modelos por agente, barreras de seguridad, cifras T1–T22, casos 9–12) y el README. Se corrigió la afirmación de que los revisores solo pueden leer: FURY y JUEZ corrieron sondas propias pese a las herramientas declaradas.
+- Aportes del usuario que no habían quedado escritos: instaló Docker él mismo con una sesión guía (P6); eligió que las credenciales llegaran solo al correr y que sin filtro no corriera nada (T19); notó que el reporte no mostraba nada y pidió estadísticas y capturas (T21); preguntó cómo evitar que el agente quedara sin herramientas si el hook se rompía (T22); preguntó por qué había tantas aprobaciones y si reducir revisiones subía el riesgo (validación proporcional).
+- Precisiones de origen: FURY reportó los archivos falsos en una copia (T19) y el error de sintaxis del hook (al revisar T20, defecto anterior a T20); JUEZ listó la imagen con contenedores efímeros (T19) e hizo un cálculo en memoria (T22).
+- SHIKAMARU FAIL en T24: cifras, modelos, citas y diagramas correctos; faltaba respaldo en la bitácora para varios aportes y el README daba por logrado el CI. Corregido por el orquestador.

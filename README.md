@@ -11,7 +11,11 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 - **Esperas por la API, no por tiempo.** Cada acción que dispara una petición espera la respuesta de la API correspondiente y verifica su status. Sin `sleep` ni reintentos como parche.
 - **Locators estables.** Test-id (`data-test`), rol o texto; nada de XPath ni clases de estilo.
 - **Evidencia por paso.** Cada escenario guarda una captura por pantalla; la carpeta de una compra exitosa lleva el número de factura.
-- **Credenciales seguras.** El usuario de prueba sale de variables de entorno; nunca se imprime y la contraseña sale enmascarada en las capturas.
+- **Credenciales seguras.** El usuario de prueba sale de variables de entorno; la contraseña sale enmascarada en las capturas (el login lo comprueba antes de escribirla) y, si una prueba falla, la contraseña y el correo salen como `***` en la consola y en el reporte.
+- **Reporte legible.** Allure con pasos en Gherkin, capturas y colores Tokyo Night, en un HTML único que no hace conexiones externas.
+- **Reproducible en Docker.** La misma imagen, sin root y con la base fijada, para local y CI; sin filtro no corre nada.
+- **CI sin secretos (en revisión).** Workflow de GitHub Actions para cada push y pull request a `main`, y a demanda; nunca con login. La primera corrida en GitHub está en diagnóstico.
+- **Barreras de seguridad para agentes de IA.** Un hook revisa cada comando, y si se rompe solo deja leer y repararlo.
 - **Hallazgos documentados.** La suite encontró tres comportamientos del sitio que vale la pena reportar (ver más abajo).
 
 ## Stack
@@ -22,7 +26,10 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 | Playwright 1.65 | Navegador (Chromium) |
 | pytest 9 + pytest-bdd 9 | Runner y Gherkin |
 | python-dotenv | Configuración desde `.env` |
-| npm | Solo como lanzador de comandos cortos, sin dependencias |
+| Allure 3 + allure-pytest-bdd | Reporte HTML con pasos en Gherkin, capturas y colores Tokyo Night |
+| Docker | Imagen para correr las pruebas sin navegador visible |
+| GitHub Actions | CI y ejecución a demanda, con el reporte como artefacto |
+| npm | Lanzador de comandos cortos y fuente de Allure (única dependencia) |
 
 ## Estructura
 
@@ -33,6 +40,10 @@ tests/
 ├─ pages/           # Page Objects: home, resultados, producto, carrito, login, checkout
 ├─ data/            # Compradores sintéticos y tarjetas de prueba
 └─ conftest.py      # URL base, idioma del navegador, evidencias
+scripts/            # report.py y tokyo-night.css: arman el reporte HTML
+Dockerfile          # Imagen de las pruebas
+.github/workflows/  # pruebas.yml: CI y ejecución a demanda
+docs/               # Cómo se construyó con IA
 brain/              # Backlog, decisiones y bitácora del proyecto
 .claude/            # Agentes, orquestador y reglas de seguridad (ver "Cómo se construyó")
 ```
@@ -112,7 +123,13 @@ Si una compra no llega a la factura, la carpeta queda sin el sufijo `INV-…`: s
 
 ## Reporte
 
-Cada corrida deja su propio reporte `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>.html` (autocontenido, se abre con doble clic; `<selección>` sale de `-m` y `-k`, o es `all`; no se sobrescriben). Si un escenario falla, la captura de la pantalla en ese momento queda incrustada en el reporte y en `test-results/`. No se guarda trace ni video. Ambas carpetas están fuera de git.
+Cada corrida deja sus resultados en `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>/resultados` (`<selección>` sale de `-m` y `-k`, o es `all`; no se sobrescriben). Para verlos:
+
+```
+npm run toolshop:report
+```
+
+Arma, en el PC, un HTML único y en español de la última corrida en `reports/<corrida>/informe/index.html`, que se abre con doble clic. Cada escenario muestra sus pasos en Gherkin con las capturas adjuntas al paso que las tomó, y la fila de `Ejemplos`; si falla, también la captura del momento (que además queda en `test-results/`). El reporte no muestra los argumentos de los pasos ni el nombre del equipo, y reemplaza por `***` los valores de `TEST_USER_PASSWORD` y `TEST_USER_EMAIL` en mensajes, trazas y adjuntos de texto, y también en la consola de pytest (una clave que no esté en esas variables no se redacta, ni lo que se imprima con `-s`); en el reporte la ruta local del proyecto queda relativa. Tampoco hace peticiones a internet: se le quita la analítica de Google que Allure incluye. Usa los colores de Tokyo Night (`scripts/tokyo-night.css`) y abre siempre oscuro, aunque el sistema esté en modo claro. No se guarda trace ni video. `reports/` y `test-results/` están fuera de git.
 
 ## Hallazgos de QA en Toolshop
 
@@ -122,13 +139,14 @@ Cada corrida deja su propio reporte `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>.
 
 ## Cómo correrlo
 
-Requisitos: Windows, Python 3.15 y Node/npm. Los comandos de `npm` usan la ruta `.venv\Scripts\python`, propia de Windows.
+Requisitos: Windows, Python 3.15 y Node/npm (Node arma el reporte). Los comandos de `npm` usan la ruta `.venv\Scripts\python`, propia de Windows.
 
 ```
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python -m playwright install chromium
 copy .env.example .env
+npm install
 ```
 
 Completa `.env` con `BASE_URL=https://practicesoftwaretesting.com` y un usuario de prueba de Toolshop en `TEST_USER_EMAIL` y `TEST_USER_PASSWORD`. `.env` no se versiona.
@@ -144,27 +162,47 @@ Todos estos comandos abren el navegador visible:
 | `npm run toolshop:confirmacion` | Filas con `etapa` confirmacion (pagan y obtienen factura) |
 | `npm run toolshop:invitado` | Filas como invitado (incluye la celda de acceso vacía) |
 | `npm run toolshop:login` | Filas con usuario registrado (`login_checkout` y `login_home`) |
+| `npm run toolshop:report` | No corre pruebas: arma el HTML de la última corrida (ver Reporte) |
 
 Filtros extra de pytest van después de `--`, por ejemplo `npm run toolshop:confirmacion -- -k "Thor"`. Sin navegador visible: `.venv\Scripts\python -m pytest`.
+
+### Con Docker
+
+Requisito: Docker Desktop. La imagen (`python:3.15-slim` con Chromium) no incluye `.env`: las variables se pasan al correr. En ese archivo los valores van sin comillas, porque Docker las tomaría como parte del valor.
+
+```
+npm run toolshop:docker:build
+npm run toolshop:docker -- -m search -k "Combination and Pliers"
+```
+
+Corre sin pantalla y deja los resultados y las capturas en `reports/` y `evidencias/` del proyecto; la imagen no lleva Node, así que el HTML se arma después en el PC con `npm run toolshop:report`. Sin argumentos no corre pruebas: solo lista los tags. Con otras opciones pero sin `-m` ni `-k` (por ejemplo solo `-v`) termina con error pidiendo elegir; con uno de los dos basta. Reportes y evidencias usan la hora de Bogotá. Con varias palabras en `-k` hay que unirlas con `and`. `-k " "` y `-m " "` (solo espacios) cuentan como vacíos. El contenedor no corre como root (usuario 1000, o el que pases con `--user`), así que los archivos de `reports/` no quedan de root en Linux.
+
+### En GitHub Actions
+
+El workflow `.github/workflows/pruebas.yml` usa la misma imagen del `Dockerfile` y corre sin credenciales ni secretos (solo `BASE_URL`, pública).
+
+- **Automático** (push o pull request a `main`): home y búsqueda, `-k "test_home or test_buscar"` (4 pruebas).
+- **A demanda**: pestaña Actions, workflow "Pruebas", "Run workflow". Se elige el tag (`search`, `cart` o `compra`) y, si se quiere, un filtro (por ejemplo `Combination and Pliers`). Las filas con login nunca corren: el filtro se combina siempre con `not login`. El filtro solo admite letras, números, espacios y `_ . ( ) -`, con paréntesis balanceados.
+- **Resultado**: el job queda en rojo si falla una prueba y siempre sube el artefacto `reporte-allure` (un HTML, 7 días). Descárgalo desde la página de la corrida y ábrelo en el navegador.
+
+Aviso: este repositorio es público. Los artefactos los puede descargar cualquiera con una cuenta de GitHub, y los logs y el filtro que escribas también son públicos. No se suben las carpetas `evidencias/` ni `resultados/`, pero el HTML sí lleva las capturas (con datos sintéticos) y muestra rama, commit y URL de la corrida. Las pruebas con login no corren en CI.
 
 ## Cómo se construyó
 
 La IA implementa, propone y revisa; yo decido qué se construye, detecto cuándo algo no es lo que quería y convierto los errores que se pueden repetir en reglas. La arquitectura de agentes viene de mi experiencia laboral y de estudiar distintos diseños de agentes, y sigue en evolución: faltan evals que midan a cada agente, skills y una evaluación cíclica para mejorarlos. La idea de las banderas `acceso` y `etapa` en los Ejemplos también es mía.
 
-El flujo trabaja una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero, cuatro validadores revisan en paralelo (**ROCK LEE** corre solo el escenario tocado, **SHIKAMARU** el alcance, **FURY** la seguridad, **KAKASHI** las buenas prácticas) y, si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces).
+El flujo trabaja una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero y validan **ROCK LEE** (corre solo lo tocado), **SHIKAMARU** (alcance), **FURY** (seguridad) y **KAKASHI** (buenas prácticas). La ronda completa es para lo que toca seguridad, Docker, CI o algo público; el resto pasa por menos agentes. Si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces). Cada agente tiene su modelo según el riesgo de lo que hace.
 
-La memoria vive en `brain/` (backlog con criterios, decisiones con su porqué y bitácora), las reglas en `CLAUDE.md`, y un hook (`.claude/hooks/guard.py`) bloquea acciones riesgosas y pide aprobación antes de publicar en GitHub.
+La memoria vive en `brain/` (backlog con criterios, decisiones con su porqué y bitácora), las reglas en `CLAUDE.md`, y un hook (`.claude/hooks/guard.py` lanza las reglas de `guard_rules.py`) bloquea acciones riesgosas y pide aprobación antes de publicar en GitHub; si las reglas no cargan, solo deja leer y buscar, y reparar `guard_rules.py` con aprobación.
 
-En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con un diagrama, las reglas y su porqué, cifras sacadas de `brain/` y ocho problemas reales: cómo se detectaron, cómo se resolvieron y qué aporté yo en cada uno.
+En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con diagramas, los modelos de cada agente, las barreras de seguridad, las reglas y su porqué, cifras sacadas de `brain/` y doce problemas reales: cómo se detectaron, cómo se resolvieron y qué aporté yo en cada uno.
 
 ## Próximas fases
 
 La meta es un sistema todo en uno: lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
 
-1. **Docker:** imagen reproducible para correr igual en local y en CI.
-2. **GitHub Actions:** la suite corre en cada push y a demanda, con el reporte como artefacto.
-3. **Supabase:** historial de corridas, autenticación y login.
-4. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
-5. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
-6. **Evals:** medir a cada agente con casos y resultados esperados.
-7. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.
+1. **Supabase:** historial de corridas, autenticación y login.
+2. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
+3. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
+4. **Evals:** medir a cada agente con casos y resultados esperados.
+5. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.

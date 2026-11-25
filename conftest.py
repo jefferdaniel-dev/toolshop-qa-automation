@@ -1,20 +1,57 @@
+import os
 from datetime import datetime
 from pathlib import Path
 
+import allure_commons
 import pytest
 
+from tests.allure_privacy import AllurePrivacy
 from tests.naming import slug
+from tests.redaction import redact_report
 
 
-# Lives at the project root because pytest-html reads --html in its own
-# pytest_configure, and tests/conftest.py is not loaded yet when pytest is
-# launched from the root without a path; this one is.
+# Lives at the project root because tests/conftest.py is not loaded yet when
+# pytest is launched from the root without a path; this one is. It runs before
+# the Allure plugin reads --alluredir.
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
-    base = config.option.htmlpath
+    allure_commons.plugin_manager.register(AllurePrivacy())
+    base = config.option.allure_report_dir
     if not base:
         return
     filters = (config.option.markexpr, config.option.keyword)
     selection = "_".join(slug(value) for value in filters if value)
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    config.option.htmlpath = Path(base).parent / f"{stamp}_{selection or 'all'}.html"
+    config.option.allure_report_dir = str(
+        Path(base) / f"{stamp}_{selection or 'all'}" / "resultados"
+    )
+
+
+# In the container the whole suite must never start by accident, e.g. when only
+# `-v` is passed; a bare run (`--markers`) does not collect, so it is unaffected.
+def pytest_collection(session):
+    options = session.config.option
+    has_filter = (options.markexpr or "").strip() or (options.keyword or "").strip()
+    if os.environ.get("RUNNING_IN_DOCKER") and not has_filter:
+        raise pytest.UsageError(
+            'Elige qué correr con -m <tag> o -k "<texto>", '
+            'por ejemplo: -m search -k "Combination and Pliers".'
+        )
+
+
+# These wrappers run `trylast`, so their code after the yield runs before the
+# one of Allure's listener and before the terminal reads the report: the
+# console, the "short test summary" and the text attachments all see the
+# redacted report.
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtest_makereport(item, call):
+    report = yield
+    redact_report(report)
+    return report
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_make_collect_report(collector):
+    report = yield
+    redact_report(report)
+    return report

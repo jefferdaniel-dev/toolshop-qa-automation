@@ -1,32 +1,23 @@
-"""PreToolUse guard: blocks or asks before risky actions that permission rules miss.
+"""PreToolUse launcher: runs the rules in guard_rules.py.
 
-Permission rules in settings.json only match the start of a command, so
-`cd x && git push` or `gh repo create --push` slip past them. This hook looks
-at the whole command and at file paths. It stops mistakes, not deliberate
-obfuscation (git aliases, variables, quoted command names).
+If the rules cannot be loaded (syntax error, import failure, missing file) the
+launcher falls back to a degraded mode so the session is not locked out: reading
+and searching stay allowed (except secret files), editing guard_rules.py asks the
+user, and everything else is denied. Keep this file minimal and dependency-free.
 """
 
+import contextlib
+import io
 import json
+import os
 import re
-import subprocess
 import sys
 
-ENV_FILE = re.compile(r"(?<![\w.=-])\.env(?:\.(?!example\b)[\w.-]+)?(?![\w.-])", re.I)
-ENV_NAME = re.compile(r"\.env(\.(?!example$)[\w.-]+)?", re.I)
-READERS = re.compile(
-    r"(?i)(?<![\w-])(cat|type|more|less|head|tail|nl|gc|get-content|grep|egrep|rg|"
-    r"findstr|select-string|sed|awk|strings|od|xxd|base64|cp|copy|copy-item|mv|"
-    r"move|move-item|scp|curl|source)(?![\w-])|(?<![<\w])<(?![<&(])|(?<!\S)\.\s"
-)
-CONFIG_PATH = re.compile(r"\.claude[\\/](settings(\.local)?\.json|hooks[\\/])", re.I)
-WRITERS = re.compile(
-    r"(?i)(?<![0-9&>])>(?!&)|(?<![\w-])(set-content|add-content|out-file|tee|tee-object|"
-    r"cp|copy|copy-item|mv|move|move-item|rm|del|remove-item)(?![\w-])|\bsed\s+-i"
-)
-EMAIL = re.compile(r"[\w.%+-]+@([\w-]+(?:\.[\w-]+)*\.[a-z]{2,})", re.I)
-ALLOWED_EMAIL_DOMAINS = {"example.com"}
-PROTECTED_STAGED = re.compile(r"(^|/)(\.env(\.(?!example$)[^/]+)?$)|^(recordings|evidencias)/", re.I)
-SEGMENT_END = r"[^;&|\n]*"
+OUT = sys.stdout
+RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "guard_rules.py")
+SECRET_FILE = re.compile(r"(?<![\w.=-])\.env(?:\.(?!example\b)[\w.-]+)?(?![\w.-])", re.I)
+SECRET_NAME = re.compile(r"\.env(\.(?!example$)[\w.-]+)?", re.I)
+PATH_KEYS = ("file_path", "notebook_path", "path", "glob")
 
 
 def decide(decision: str, reason: str):
@@ -39,132 +30,84 @@ def decide(decision: str, reason: str):
                     "permissionDecisionReason": reason,
                 }
             }
-        )
+        ),
+        file=OUT,
     )
     sys.exit(0)
 
 
-def drop_heredocs(command: str) -> str:
-    command = re.sub(
-        r"<<-?\s*(['\"]?)(\w+)\1.*?^\s*\2\s*$", "", command, flags=re.S | re.M
+def load_run():
+    with open(RULES, encoding="utf-8") as source:
+        code = compile(source.read(), RULES, "exec")
+    namespace = {"__name__": "guard_rules", "__file__": RULES}
+    # Anything the rules print or do to the streams while loading is discarded, so
+    # the only output is the decision.
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+        exec(code, namespace)
+    return namespace["run"]
+
+
+def cause_of(error: BaseException) -> str:
+    try:
+        line = getattr(error, "lineno", None)
+        return type(error).__name__ + (f" at line {line}" if isinstance(line, int) else "")
+    except Exception:
+        return "unreadable error"
+
+
+def same_file(path: str, other: str) -> bool:
+    return os.path.normcase(os.path.realpath(path)) == os.path.normcase(os.path.realpath(other))
+
+
+def judge_degraded(raw: str, cause: str, repair: str):
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        return "deny", f"The guard rules failed to load ({cause}) and the request is not an object. {repair}"
+    tool, tool_input = payload.get("tool_name"), payload.get("tool_input")
+    if not isinstance(tool, str) or not isinstance(tool_input, dict):
+        return "deny", f"The guard rules failed to load ({cause}) and the request has unexpected types. {repair}"
+    paths = [tool_input.get(key) for key in PATH_KEYS]
+    if any(value is not None and not isinstance(value, str) for value in paths):
+        return "deny", f"The guard rules failed to load ({cause}) and a path is not text. {repair}"
+    if tool in ("Read", "Grep"):
+        for value in filter(None, paths):
+            name = re.split(r"[\\/]", value.rstrip("\\/"))[-1]
+            if SECRET_NAME.fullmatch(name) or SECRET_FILE.search(value):
+                return "deny", f"{tool} on .env is not allowed: secrets stay out of the session."
+        return "allow", ""
+    if tool in ("Edit", "Write") and paths[0] and same_file(paths[0], RULES):
+        return "ask", f"The guard rules failed to load ({cause}); approve only an edit that repairs guard_rules.py."
+    return (
+        "deny",
+        f"The guard rules failed to load ({cause}), so only reads, searches and edits of "
+        f"guard_rules.py are allowed. {repair}",
     )
-    return re.sub(r"@'.*?^'@", "", command, flags=re.S | re.M)
 
 
-def check_file_tool(tool: str, tool_input: dict):
-    paths = [tool_input.get(key) or "" for key in ("file_path", "notebook_path", "path", "glob")]
-    for path in filter(None, paths):
-        name = re.split(r"[\\/]", path.rstrip("\\/"))[-1]
-        if ENV_NAME.fullmatch(name) or ENV_FILE.search(path):
-            decide("deny", f"{tool} on .env is not allowed: secrets stay out of the session.")
-    if tool in ("Edit", "Write", "NotebookEdit") and CONFIG_PATH.search(paths[0] or paths[1]):
-        decide("ask", "Changing permissions or hooks needs the user's approval.")
-
-
-def git(cwd: str, *args: str) -> str:
-    result = subprocess.run(
-        ["git", "-c", "core.quotePath=false", *args],
-        cwd=cwd or None, capture_output=True, text=True, encoding="utf-8",
-    )
-    if result.returncode != 0:
-        decide("ask", f"Could not inspect the commit (git {args[0]} failed); review it manually.")
-    return result.stdout
-
-
-def check_commit(code: str, cwd: str):
-    if re.search(r"(^|[;&|(\s])cd\s|\bgit\s+-C\b", code):
-        decide("ask", "Commit runs in another folder; the guard cannot inspect it.")
-    stages_all = re.search(
-        r"\bgit\b" + SEGMENT_END + r"\b(add|stage)\b|\bcommit\b" + SEGMENT_END + r"((?<!\S)-\w*a\w*|--all\b)",
-        code,
-    )
-    diff = ["diff", "--no-ext-diff", "--no-color"]
-    if stages_all:
-        names = git(cwd, *diff, "HEAD", "--name-only").splitlines()
-        untracked = git(cwd, "ls-files", "--others", "--exclude-standard").splitlines()
-        names += untracked
-        added = git(cwd, *diff, "HEAD", "-U0")
-        for path in untracked:
-            try:
-                with open(f"{cwd}/{path}" if cwd else path, encoding="utf-8") as fh:
-                    added += "\n+" + fh.read().replace("\n", "\n+")
-            except (OSError, UnicodeDecodeError):
-                pass
-    else:
-        names = git(cwd, *diff, "--cached", "--name-only").splitlines()
-        added = git(cwd, *diff, "--cached", "-U0")
-
-    blocked = [n for n in names if PROTECTED_STAGED.search(n)]
-    if blocked:
-        decide("deny", f"Commit would include protected files: {', '.join(blocked)}.")
-
-    added_lines = [l[1:] for l in added.splitlines() if l.startswith("+") and not l.startswith("+++")]
-    domains = {m.lower() for line in added_lines for m in EMAIL.findall(line)}
-    if domains - ALLOWED_EMAIL_DOMAINS:
-        decide("deny", "Commit adds a real-looking email address; test data must use @example.com.")
-
-
-def check_command(command: str, cwd: str):
-    bodyless = drop_heredocs(command)
-    unquoted = bodyless.replace('"', "").replace("'", "")
-    code = re.sub(r"\"(?:\\.|[^\"\\])*\"|'[^']*'", "''", bodyless)
-
-    if ENV_FILE.search(unquoted) and READERS.search(unquoted):
-        decide("deny", "Reading or copying .env is not allowed: secrets stay out of the session.")
-
-    if CONFIG_PATH.search(unquoted) and WRITERS.search(unquoted):
-        decide("ask", "Changing permissions or hooks needs the user's approval.")
-
-    leaky = r"--showlocals|--tb[= ]long|--full-trace|--tracing[= ](on|retain)|(?<![^\s=])-[a-zA-Z]*l[a-zA-Z]*(?![^\s;&|])"
-    for segment in re.findall(r"(?:\bpytest\b|\btoolshop:)" + SEGMENT_END, unquoted):
-        if re.search(leaky, segment):
-            decide("deny", "These pytest options print the test password; use the default traceback.")
-    if re.search(r"PYTEST_ADDOPTS\s*=" + SEGMENT_END + "(" + leaky + ")", unquoted):
-        decide("deny", "These pytest options print the test password; use the default traceback.")
-
-    if re.search(r"\bgit\b" + SEGMENT_END + r"\bpush\b" + SEGMENT_END + r"(--force\b|--force-with-lease|(?<!\S)-f\b|(?<!\S)\+\S)", code):
-        decide("deny", "Force push rewrites remote history.")
-    if re.search(
-        r"\bgit\b" + SEGMENT_END + r"(\breset\s+--hard|(?<![.\w-])rebase\b|filter-branch|\bcommit\b"
-        + SEGMENT_END + r"--amend|\bclean\b" + SEGMENT_END + r"((?<!\S)-\w*f|--force))",
-        code,
-    ):
-        decide("deny", "This rewrites history or discards work; ask the user to do it.")
-    if re.search(
-        r"(?i)(?<![\w-])(rm|rmdir|rd|ri|del|erase|remove-item)\b" + SEGMENT_END
-        + r"((?<!\S)-(r[fv]*|[fv]+r[fv]*|rec\w*)(?!\S)|--recursive)",
-        code,
-    ):
-        decide("deny", "Recursive delete is not allowed.")
-    if re.search(r"\bgit\b" + SEGMENT_END + r"\b(add|stage)\b" + SEGMENT_END + r"((?<!\S)-\w*f\w*|--force\b)", code):
-        decide("deny", "Forcing git add would stage ignored files such as .env.")
-
-    if re.search(r"\bgit\b" + SEGMENT_END + r"\bcommit\b", code):
-        check_commit(code, cwd)
-
-    if re.search(r"\bgit\b" + SEGMENT_END + r"\bpush\b", code) or re.search(
-        r"\bgh\b" + SEGMENT_END + r"(--push\b|\bpr\s+(create|merge)\b|\brelease\b|"
-        r"\brepo\s+(create|delete|edit|rename)\b|\bapi\b" + SEGMENT_END
-        + r"((?<!\S)-[XfF]\b|--method|--field|--raw-field|--input))",
-        code,
-    ):
-        decide("ask", "Publishing to GitHub needs the user's approval.")
+def degraded(raw: str, cause: str):
+    repair = "Ask the user to run `git restore .claude/hooks/guard_rules.py` in their own terminal."
+    try:
+        decision, reason = judge_degraded(raw, cause, repair)
+    except Exception:
+        decision, reason = "deny", f"The guard rules failed to load ({cause}) and the request could not be read. {repair}"
+    if decision == "allow":
+        sys.exit(0)
+    decide(decision, reason)
 
 
 def main():
-    payload = json.load(sys.stdin)
-    tool = payload.get("tool_name", "")
-    tool_input = payload.get("tool_input") or {}
-    if tool in ("Bash", "PowerShell"):
-        check_command(tool_input.get("command", ""), payload.get("cwd", ""))
-    elif tool in ("Read", "Grep", "Edit", "Write", "NotebookEdit"):
-        check_file_tool(tool, tool_input)
-
-
-if __name__ == "__main__":
+    raw = sys.stdin.read()
     try:
-        main()
+        run = load_run()
+    except BaseException as error:
+        degraded(raw, cause_of(error))
+    try:
+        run(raw)
     except SystemExit:
         raise
-    except Exception as error:  # a broken guard must not silently allow risky actions
+    except Exception as error:
         decide("ask", f"guard.py failed ({type(error).__name__}); confirm this action manually.")
+
+
+main()

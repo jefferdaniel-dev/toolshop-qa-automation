@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: ninguna.** T6 en pausa por decisión del usuario (2026-11-19). Orden acordado: T15 → T16 → T17 → T5 → T18 → T6.
+**Siguiente: T23.** T6 en pausa por decisión del usuario (2026-11-19).
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -15,7 +15,7 @@ Cada herramienta se instala justo antes de la fase que la usa.
 | P3 | Repo en GitHub (público): https://github.com/jefferdaniel-dev/toolshop-qa-automation | agente con `gh`, previa confirmación | Fase 3 | `done` |
 | P4 | Cuenta Supabase + conector Supabase en Claude | usuario | Fase 4 | `pending` |
 | P5 | Cuenta Vercel/v0 + conectores Vercel y v0 en Claude | usuario | Fase 5 | `pending` |
-| P6 | Docker Desktop (requiere admin y WSL2) | usuario | Fase 2 | `pending` |
+| P6 | Docker Desktop 4.100.1 (WSL2, por usuario) | usuario | Fase 2 | `done` |
 | P7 | API key gratuita de Grok en `.env` (sin valor real en `.env.example`) | usuario | Fase 6 | `pending` |
 
 Ya disponible: Git, Node/npm, GitHub CLI con sesión iniciada (scopes `repo`, `workflow`).
@@ -160,10 +160,86 @@ Criterio de aceptación:
 - README: sección "Cómo se construyó" con un resumen corto (3–5 líneas) y enlace al documento; corregir lo que haya quedado desactualizado en esa sección.
 - Todo verificable contra `brain/log.md` y `brain/decisions.md`; nada inventado. Sin datos personales (nombre, correo), credenciales ni valores de `.env`. Diagrama en Mermaid (GitHub lo renderiza).
 
+## Fase 2 — Docker
+
+### T19 · Imagen Docker para correr las pruebas — `done`
+Pedido del usuario (2026-11-24); comportamiento confirmado con él antes de escribir el criterio.
+Criterio de aceptación:
+- `Dockerfile` sobre `python:3.15-slim` (D30) que instala `requirements.txt` y Chromium con sus dependencias del sistema. `requirements.txt` fija `playwright==1.65.2`, la versión ya instalada en `.venv`.
+- `.dockerignore` por lista permitida (todo excluido salvo lo que la imagen usa): `.env`, `recordings/`, `.git`, `.venv`, `evidencias/` y `reports/` nunca entran a la imagen.
+- Scripts npm `toolshop:docker:build` (construye) y `toolshop:docker` (corre sin pantalla con `--rm` y `--env-file .env`). Los filtros van después de `--`, por ejemplo `npm run toolshop:docker -- -m search`.
+- Sin argumentos no corre ninguna prueba: solo muestra los tags disponibles.
+- Al correr con filtro, el reporte y las capturas quedan en `reports/` y `evidencias/` de la carpeta del proyecto.
+- README: sección corta de Docker (requisito, construir, correr con filtro, aviso de que los valores de `.env` van sin comillas).
+- Sin cambios en las pruebas. Validación solo con `-m search -k "Combination and Pliers"` (sin login; pytest no acepta espacios sueltos en `-k`).
+
+### T20 · Cierre de observaciones de Docker — `done`
+Origen: observaciones de FURY y KAKASHI en T19. Comportamiento confirmado con el usuario (2026-11-24).
+Criterio de aceptación:
+- En el contenedor, sin `-m` ni `-k` no corre ninguna prueba aunque se pasen otras opciones (p. ej. `npm run toolshop:docker -- -v`): termina con error y un mensaje que dice cómo elegir. Basta uno de los dos filtros. Sin argumentos sigue listando los tags con código 0. Los comandos locales (`toolshop:all` y demás) no cambian.
+- Reportes y evidencias creados en el contenedor usan la hora de `America/Bogota` (`TZ` funciona en la imagen sin instalar `tzdata`, comprobado).
+- El hook `.claude/hooks/guard.py` bloquea, sin preguntar, los comandos de Docker que podrían mostrar la contraseña: opciones filtrantes de pytest (`-l`, `--showlocals`, `--tb=long`, `--full-trace`, `--tracing`) en `docker run ... toolshop-qa`; `--entrypoint env` o `printenv`; `docker inspect`; y `docker exec` con `env` o `printenv`. Siguen pasando `npm run toolshop:docker:build`, `npm run toolshop:docker -- -m search -k "..."`, y `docker images`, `ps`, `build` y `history`.
+- El hook se prueba pasándole comandos de ejemplo por stdin, sin ejecutarlos: primero los casos que hoy no bloquea, luego los mismos bloqueados. Editarlo pide la aprobación del usuario. Actualizar D25.
+- Validación: la corrida sin filtro, `-m search -k "Combination and Pliers"`, y una con solo `-k` usando `--collect-only`. Sin login ni compra.
+- README de Docker: ajustar la frase sobre correr sin argumentos.
+
+### T21 · Reporte Allure en lugar de pytest-html — `done`
+Pedido del usuario (2026-11-24): el reporte actual sale vacío y sin capturas. Causa confirmada: pytest-html 4.2.0 falla al abrirse desde una ruta con tilde (`pushState` con `unescape`). Comportamiento confirmado con el usuario. Reemplaza el reporte de T5.
+Criterio de aceptación:
+- `allure-pytest-bdd` fijado en `requirements.txt` y Allure 3 fijado en `package.json`; se quitan `pytest-html`, su opción en `pytest.ini` y el código que solo servía para él. Se mantiene la captura en fallos en `test-results/`.
+- Cada escenario, pase o falle, muestra en el reporte sus pasos en Gherkin con las capturas de `evidencias/` adjuntas en el paso que las tomó. En un fallo se adjunta también la captura del momento.
+- El reporte no muestra los argumentos de los pasos (fixtures), para que una clave pasada como dato no se filtre; sí la fila de `Ejemplos`. Tampoco el nombre del equipo, ni en claro ni codificado.
+- La corrida (local y Docker) deja los resultados en una carpeta propia dentro de `reports/`, sin sobrescribir las anteriores y con el nombre de hoy (`<YYYY-MM-DD_HH-MM-SS>_<selección>`). `npm run toolshop:report`, en el PC, arma un HTML único y en español de la última corrida. La imagen Docker no lleva Node.
+- El HTML abre bien con doble clic desde la ruta del proyecto (tiene tilde y espacios), verificado sin errores de JavaScript.
+- El reporte usa los colores de Tokyo Night (variante Night, paleta publicada en `tokyo-night/tokyo-night-vscode-theme`) en fondo, texto, bordes, enlaces y estados (aprobado, fallido, roto), y abre siempre así aunque el sistema esté en modo claro. Los colores viven en un archivo CSS propio.
+- Prueba de fuga: con una clave inventada en memoria y un fallo forzado (sin tocar login real), no aparece en resultados ni en el HTML.
+- Los filtros del contenedor y las opciones bloqueadas por el hook siguen igual. Actualizar D24, D29 y README (stack, reporte, comandos, Docker).
+- Validación: `-m search -k "Combination and Pliers"` en local y en Docker, más la sonda de fuga. Sin login ni compra.
+
+### T22 · Cerrar fugas fuera del reporte y endurecer el hook — `done`
+Origen: observaciones de FURY y JUEZ en T20 y T21. Comportamiento confirmado con el usuario (2026-11-25).
+Criterio de aceptación:
+- Al fallar una prueba, los valores de `TEST_USER_PASSWORD` y `TEST_USER_EMAIL` salen como `***` en la consola de pytest y en los textos del reporte (mensajes, trazas y adjuntos de texto), en todas sus formas escapadas. El correo sigue visible en la captura `login` (D23). Variable ausente, vacía o solo espacios: sin cambios ni error.
+- En el reporte, la ruta local del proyecto no aparece en mensajes ni trazas (queda relativa). En la consola no cambia.
+- El login comprueba que el campo es `type=password` antes de escribir la clave.
+- El hook bloquea, sin preguntar, en comandos de pytest, `toolshop:` y `docker run ... toolshop-qa`: `--tb` con cualquier valor que no sea `short`, `line`, `native` o `no` si la sonda demuestra que no filtran, `-o`/`--override-ini` con `addopts`, `-c`/`--config-file`, `--confcutdir`, `--noconftest` y `DEBUG=pw:*` (también con `$env:`, `export` y `docker -e`). No debe bloquear `-k`, `-m`, `--collect-only`, `--headed`, `-v`, `--lf`, `-x` ni los scripts npm.
+- Hook roto, sin dejar al agente encerrado (acordado con el usuario, 2026-11-25):
+  - Prevención: una edición con Edit o Write que deje `guard.py` (o el lanzador) con error de sintaxis se niega, comprobando el contenido resultante antes de guardar. El archivo vigente no cambia.
+  - Modo degradado: un lanzador pequeño arranca `guard.py`; si no puede, se permite leer y buscar (salvo `.env`), editar solo `guard.py` pide aprobación, y todo lo demás (comandos y otras ediciones) se niega con un mensaje que dice la causa y cómo repararlo (`git restore .claude/hooks/guard.py` en la terminal del usuario).
+  - Comprobado en la documentación oficial (code.claude.com/docs/en/hooks y permission-modes, 2026-11-25): salida 2 bloquea, cualquier otro error deja pasar la acción, y un `ask` de PreToolUse va a la solicitud de permiso sin que decida el clasificador del modo automático. Los hooks también aplican a subagentes.
+  - Diseño: `guard.py` queda como lanzador y las reglas pasan a `guard_rules.py`; `settings.json` no cambia. Donde arriba dice `guard.py` como archivo de reglas, se entiende `guard_rules.py`. Ninguna prueba deja el hook real roto: copias o stdin.
+  - Límite aceptado: si falta `py -3.15` o se rompe el propio lanzador, repara el usuario.
+  - Tocar `.claude/` pide la aprobación del usuario.
+- El hook se prueba por stdin, sin ejecutar los comandos de ejemplo: primero los casos que hoy pasan, luego los mismos bloqueados; las tablas de T20 siguen con 0 desajustes y ninguna decisión se debilita frente a `HEAD`.
+- Sondas con claves y correos inventados en una copia aislada, sin login real, buscando en la consola, los resultados, los adjuntos y el HTML con base64 decodificado.
+- Actualizar D23, D25, D29 y README. Validación real: solo `-m search -k "Combination and Pliers"` en local y Docker.
+
+## Fase 3 — GitHub Actions
+
+### T23 · Workflow de CI y ejecución a demanda, sin login — `in_progress`
+Pedido y comportamiento confirmado con el usuario (2026-11-25). Ronda completa de validadores (CI y artefactos públicos).
+Criterio de aceptación:
+- `.github/workflows/pruebas.yml` corre en push a `main`, en pull request a `main` y a demanda (`workflow_dispatch`), usando la imagen del `Dockerfile` (igual que en local).
+- Automático (push y PR): home y búsqueda, con `-k "test_home or test_buscar"` (4 pruebas). Sin credenciales.
+- A demanda: se elige el tag (`search`, `cart` o `compra`) y un filtro opcional. Las filas con login nunca corren (`not login`). Ningún valor de entrada se interpola en un `run`: entra por variables de entorno y entre comillas.
+- Sin secretos en GitHub. `BASE_URL` es una variable de entorno del workflow; no se usa `.env`.
+- Reporte Allure (HTML único) como artefacto, también si fallan las pruebas, con retención de 7 días. `evidencias/` y `resultados/` no se suben. El job queda en rojo si falla una prueba.
+- Permisos mínimos (`contents: read`), `pull_request` (nunca `pull_request_target`), acciones de terceros fijadas por SHA con el tag en un comentario, `persist-credentials: false`, runner fijado (`ubuntu-24.04`), límite de tiempo y cancelación de corridas repetidas de la misma rama.
+- El contenedor no corre como root y el reporte y los montajes funcionan en Linux y en Windows. Imagen base fijada por digest.
+- `-k " "` y `-m " "` cuentan como sin filtro: no corren pruebas en el contenedor.
+- Los filtros, el hook y el uso local (`npm run toolshop:docker*`, `toolshop:report`) siguen igual.
+- README: cómo se ve y se lanza, y el aviso de que los artefactos de un repo público los puede bajar cualquiera con cuenta. D4, D30 y lo que cambie en decisiones.
+- Validación local: `-m search -k "Combination and Pliers"` en local y Docker, y el comando automático en Docker con el mismo usuario no root (4 pruebas, sin login); el workflow se valida con un linter de Actions si está disponible sin instalar nada, y si no, por lectura. La corrida real en GitHub se hace al publicar, con aprobación del usuario (push y PR).
+
+### T24 · Documentación del proceso con IA y README — `in_progress`
+Pedido del usuario (2026-11-25): actualizar `docs/proceso-con-ia.md` y la información del repositorio.
+Criterio de aceptación:
+- `docs/proceso-con-ia.md`: diagrama del flujo al día con el modelo de cada agente y la validación proporcional, diagrama y tabla de barreras de seguridad con sus límites, cifras al cierre de T22 y casos nuevos; todo verificable en `brain/`.
+- `README.md`: qué demuestra, stack, estructura, próximas fases y resumen del flujo.
+- Descripción y temas del repositorio en GitHub, con aprobación del usuario.
+
 ## Fases siguientes (se detallan al cerrar la anterior)
 Orden acordado con el usuario (2026-11-19). Meta: un sistema todo en uno para lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
-- Fase 2: Docker — imagen reproducible para correr las pruebas local igual que en CI.
-- Fase 3: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto, revisando que no publique capturas sensibles.
 - Fase 4: Supabase — tabla de corridas; el workflow guarda resultados; autenticación y login.
 - Fase 5: Front en Vercel (Next.js) — diseño con Claude Design (D5), lanzar una prueba con pasos simples, dispara el workflow, historial, experiencia de espera (D6).
 - Fase 6: Agente con LangGraph — usa la API gratuita de Grok para lanzar la prueba e interpretar el resultado.
