@@ -214,3 +214,44 @@
 - Pedido del usuario: el proceso debe mostrar su aporte, no solo lo que hizo la IA. `docs/proceso-con-ia.md`: sección "Mi rol", línea "Mi aporte" en cada caso, casos 7 (03-home sin sesión pese a 4 PASS) y 8 (banderas `acceso`/`etapa`, idea del usuario), próximos pasos con su visión (Docker, Actions, Supabase con auth, front en Vercel, agente LangGraph con API de Grok, evals y skills, demo propia). README: resumen y próximas fases alineados.
 - Datos del usuario: la arquitectura de agentes viene de su experiencia laboral y estudio; el sitio real se descartó como principal por riesgo de afectar sus métricas.
 - `brain/tasks.md` alineado (2026-11-19): Fases 2–9 en el orden del usuario, P6 y P7 (API de Grok); D7 y la línea de fases de `CLAUDE.md` actualizadas.
+
+## 2026-11-24 · P6 done (Docker)
+- El usuario instaló Docker Desktop 4.100.1 (backend WSL2, por usuario, sin admin) guiado paso a paso en otra sesión. `.wslconfig`: 5 GB de RAM, 4 CPUs, 2 GB de swap.
+- Verificado por el orquestador: Docker 29.9.3 (cliente y servidor), Compose v5.7.1, 5159567360 bytes y 4 CPUs en `docker info`. Reportado por la sesión guía, no repetido aquí: `hello-world`, montaje de la carpeta del proyecto (lectura y escritura) y `--env-file`.
+- Sin probar: Chromium dentro de un contenedor con ese límite de memoria. Siguiente: definir con el usuario el criterio de la primera tarea de la Fase 2.
+
+## 2026-11-24 · T19 intento 1 (FAIL)
+- PICCOLO: `Dockerfile`, `.dockerignore`, scripts `toolshop:docker*`, `playwright==1.65.2`, README. `playwright install` falló al inicio por falta de `libatomic.so.1` en la base slim; resuelto instalando `libatomic1`. Su informe decía que el README ya no listaba Docker como fase futura y no era cierto; el orquestador lo vio en el diff y se corrigió antes de validar.
+- El `-k "Combination Pliers"` del criterio (escrito por el orquestador) no es válido en pytest; corregido a `"Combination and Pliers"`.
+- Validadores: ROCK LEE, SHIKAMARU y KAKASHI PASS. FURY FAIL (primera ejecución cortada por un error 529 del servicio, repetida): `!tests` en `.dockerignore` readmite toda la carpeta, así que un archivo de entorno o `recordings/` dentro de `tests/` entrarían a la imagen. Reproducido por el orquestador con archivos falsos. Hoy no hay ninguno: la imagen está limpia.
+- JUEZ: culpa PRUEBA. Excluir a cualquier profundidad los seis nombres del criterio, solo en `.dockerignore`. Repiten FURY y ROCK LEE. Reintento 1.
+
+## 2026-11-24 · T19 done
+- Reintento 1 (PICCOLO): `.dockerignore` excluye los seis nombres del criterio a cualquier profundidad. Archivos de T19: `Dockerfile`, `.dockerignore`, `package.json`, `requirements.txt`, `README.md`.
+- Validadores: FURY PASS (señuelos, incluido el de entorno en `tests/`: antes entraban y ya no), ROCK LEE PASS. SHIKAMARU y KAKASHI PASS en el intento 1; no repiten porque el reintento solo tocó `.dockerignore`.
+- Pruebas: `npm run toolshop:docker -- -m search -k "Combination and Pliers"` → 1 passed (Linux, Python 3.15.2); reporte y 3 capturas en el host, comprobados por el orquestador. Sin argumentos: lista los tags, 0 pruebas. Imagen: 23 archivos en `/app`, 2 GB en disco (566 MB de contenido).
+- Sin probar: login y compra dentro del contenedor, y el escaneo de vulnerabilidades de la imagen.
+- Pendiente de decisión del usuario: (1) `docker run` directo, `--entrypoint env` y `docker inspect` evaden el hook y podrían mostrar la contraseña (tocar el hook requiere su aprobación); (2) un argumento sin filtro (`-- -v`) corre la suite completa: el criterio escribió "sin argumentos", más estrecho que lo que él eligió ("sin filtro"); (3) la hora de reportes y evidencias sale en UTC. Para la Fase 3 (FURY): contenedor como root y base sin digest.
+
+## 2026-11-24 · T20 abierta
+- El usuario definió: en el contenedor basta `-m` o `-k`; el hook bloquea los comandos de Docker que podrían mostrar la contraseña; hora `America/Bogota`. Root en el contenedor y base sin digest quedan para la Fase 3.
+
+## 2026-11-24 · T20 intento 1 (FAIL)
+- PICCOLO: `pytest_collection` en el `conftest.py` de la raíz, `TZ` y `RUNNING_IN_DOCKER` en el `Dockerfile`, bloque docker en el hook, README y D25. Su informe decía que no se creó carpeta de evidencias; sí existía (`evidencias/2026-11-24/22-30-37_search_Combination-Pliers`) y confirma la hora local.
+- Validadores: ROCK LEE PASS (sin filtro: código 4 y 0 pruebas; search: 1 passed; hora local), SHIKAMARU PASS. KAKASHI FAIL (`ENV` antes de las capas lentas). FURY FAIL: el hook deja pasar comandos partidos con `\` o acento grave, `docker inspect` con opciones globales o `docker.exe`, `docker exec` con `sh -c "cd x; env"` y `--fulltrace`. Reproducido por el orquestador por stdin, sin ejecutar los comandos.
+- JUEZ: culpa PRUEBA. Válidos, salvo las mayúsculas (sobrealcance). El arreglo de FURY para las líneas partidas, aplicado a `bodyless`, dejaría sin aprobación copiar a `.claude\hooks\`; se usa una variable aparte solo en los dos `findall`. El endurecimiento alcanza también a `pytest` local. Reintento 1.
+- Sin corregir, a decidir por el usuario en la Fase 3: `-k " "` corre todo en el contenedor.
+
+## 2026-11-24 · T20 intento 2 (FAIL)
+- Reintento 1 (PICCOLO): variable aparte en el hook para unir líneas partidas y neutralizar separadores entre comillas, `inspect` con opciones globales y `docker.exe`, `--fulltrace`; `ENV` del `Dockerfile` después de las capas lentas.
+- KAKASHI PASS, ROCK LEE PASS (imagen reconstruida; search: 1 passed; hora local). El orquestador repitió por stdin las tablas de PICCOLO y 29 casos propios: 0 desajustes.
+- FURY FAIL por un caso: salto de línea real dentro de `bash -c "..."` en `docker exec`. JUEZ lo había dejado fuera de alcance, el orquestador omitió esa exclusión en el encargo, y JUEZ rectificó: válido. El cambio se limita a argumentos de `-c`, para no bloquear mensajes de commit de varias líneas. Reintento 2 (último).
+- Observación anterior a T20: un error de sintaxis en `guard.py` sale con código 1 y sin decisión (comprobado), así que el hook no pregunta ni bloquea.
+
+## 2026-11-24 · T20 done
+- Reintento 2 (PICCOLO): el hook también neutraliza los saltos de línea dentro del argumento de `-c`. El orquestador corrigió el comentario impreciso que señaló KAKASHI y repitió las tablas después: 0 desajustes.
+- Archivos de T20: `conftest.py` (raíz), `Dockerfile`, `.claude/hooks/guard.py`, `README.md`, D25.
+- Validadores: FURY PASS (0 debilitamientos frente a `HEAD` en 150.000 comandos aleatorios, reportado por FURY) y KAKASHI PASS en el reintento 2; ROCK LEE PASS en el reintento 1 (la imagen no cambió después); SHIKAMARU PASS en el intento 1.
+- Pruebas (Docker): sin filtro con `-v`, código 4 y 0 pruebas; `-k Combination --collect-only`, 3 de 11; `-m search -k "Combination and Pliers"`, 1 passed; hora local. En local siguen 11 recolectadas.
+- Limitaciones conocidas: una corrida sin filtro deja un reporte vacío `*_all.html`; `-k " "` y `--noconftest` saltan el filtro; el hook no cubre ofuscación (`$'...'`, here-strings, `sh -c env` por `--entrypoint sh`, `docker run <ID>`) y niega menciones entre comillas de `docker inspect`; un error de sintaxis en `guard.py` no pregunta ni bloquea.
+- Para la Fase 3: contenedor como root, base sin digest, `-k " "` y reportes con capturas como artefacto.

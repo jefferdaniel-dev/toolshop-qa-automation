@@ -1,0 +1,12 @@
+*
+!requirements.txt
+!conftest.py
+!pytest.ini
+!tests
+**/.env*
+**/recordings
+**/.git
+**/.venv
+**/evidencias
+**/reports
+**/__pycache__

@@ -115,12 +115,34 @@ def check_command(command: str, cwd: str):
     if CONFIG_PATH.search(unquoted) and WRITERS.search(unquoted):
         decide("ask", "Changing permissions or hooks needs the user's approval.")
 
-    leaky = r"--showlocals|--tb[= ]long|--full-trace|--tracing[= ](on|retain)|(?<![^\s=])-[a-zA-Z]*l[a-zA-Z]*(?![^\s;&|])"
-    for segment in re.findall(r"(?:\bpytest\b|\btoolshop:)" + SEGMENT_END, unquoted):
+    joined = re.sub(r"[\\`]\r?\n\s*", " ", bodyless)
+    # A separator inside quotes would cut the segment before the leaky option, so it is
+    # flattened to a space; after a shell -c the quoted text is a script, so newlines too.
+    joined = re.sub(
+        r"((?<!\S)-\w*c\s+)?(\"(?:\\.|[^\"\\])*\"|'[^']*')",
+        lambda m: (m.group(1) or "") + re.sub(r"[;&|\r\n]" if m.group(1) else r"[;&|]", " ", m.group(2)),
+        joined,
+    )
+    joined = joined.replace('"', "").replace("'", "")
+
+    leaky = r"--showlocals|--tb[= ]+long|--full-?trace|--tracing[= ]+(on|retain)|(?<![^\s=])-[a-zA-Z]*l[a-zA-Z]*(?![^\s;&|])"
+    for segment in re.findall(r"(?:\bpytest\b|\btoolshop:)" + SEGMENT_END, joined):
         if re.search(leaky, segment):
             decide("deny", "These pytest options print the test password; use the default traceback.")
     if re.search(r"PYTEST_ADDOPTS\s*=" + SEGMENT_END + "(" + leaky + ")", unquoted):
         decide("deny", "These pytest options print the test password; use the default traceback.")
+
+    password_msg = "This Docker command could print the test password; use the toolshop:docker script."
+    for segment in re.findall(r"\bdocker\b" + SEGMENT_END, joined):
+        _, image, after_image = segment.partition("toolshop-qa")
+        if image and re.search(r"\brun\b", segment) and re.search(leaky, after_image):
+            decide("deny", password_msg)
+        if re.search(r"--entrypoint[= ]\s*(\S*/)?(env|printenv)(?![\w.-])", segment):
+            decide("deny", password_msg)
+        if re.search(r"\bdocker(\.exe)?\s+(-\S+\s+((?!-|network\b|volume\b)\S+\s+)?)*((container|image)\s+)?inspect\b", segment):
+            decide("deny", password_msg)
+        if re.search(r"\bexec\b" + SEGMENT_END + r"(?<![\w.-])(env|printenv)(?![\w.-])", segment):
+            decide("deny", password_msg)
 
     if re.search(r"\bgit\b" + SEGMENT_END + r"\bpush\b" + SEGMENT_END + r"(--force\b|--force-with-lease|(?<!\S)-f\b|(?<!\S)\+\S)", code):
         decide("deny", "Force push rewrites remote history.")

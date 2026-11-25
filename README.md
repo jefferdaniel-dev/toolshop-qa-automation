@@ -22,6 +22,7 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 | Playwright 1.65 | Navegador (Chromium) |
 | pytest 9 + pytest-bdd 9 | Runner y Gherkin |
 | python-dotenv | Configuración desde `.env` |
+| Docker | Imagen para correr las pruebas sin navegador visible |
 | npm | Solo como lanzador de comandos cortos, sin dependencias |
 
 ## Estructura
@@ -147,6 +148,17 @@ Todos estos comandos abren el navegador visible:
 
 Filtros extra de pytest van después de `--`, por ejemplo `npm run toolshop:confirmacion -- -k "Thor"`. Sin navegador visible: `.venv\Scripts\python -m pytest`.
 
+### Con Docker
+
+Requisito: Docker Desktop. La imagen (`python:3.15-slim` con Chromium) no incluye `.env`: las variables se pasan al correr. En ese archivo los valores van sin comillas, porque Docker las tomaría como parte del valor.
+
+```
+npm run toolshop:docker:build
+npm run toolshop:docker -- -m search -k "Combination and Pliers"
+```
+
+Corre sin pantalla y deja el reporte y las capturas en `reports/` y `evidencias/` del proyecto. Sin argumentos no corre pruebas: solo lista los tags. Con otras opciones pero sin `-m` ni `-k` (por ejemplo solo `-v`) termina con error pidiendo elegir; con uno de los dos basta. Reportes y evidencias usan la hora de Bogotá. Con varias palabras en `-k` hay que unirlas con `and`.
+
 ## Cómo se construyó
 
 La IA implementa, propone y revisa; yo decido qué se construye, detecto cuándo algo no es lo que quería y convierto los errores que se pueden repetir en reglas. La arquitectura de agentes viene de mi experiencia laboral y de estudiar distintos diseños de agentes, y sigue en evolución: faltan evals que midan a cada agente, skills y una evaluación cíclica para mejorarlos. La idea de las banderas `acceso` y `etapa` en los Ejemplos también es mía.
@@ -161,10 +173,9 @@ En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con un diagr
 
 La meta es un sistema todo en uno: lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
 
-1. **Docker:** imagen reproducible para correr igual en local y en CI.
-2. **GitHub Actions:** la suite corre en cada push y a demanda, con el reporte como artefacto.
-3. **Supabase:** historial de corridas, autenticación y login.
-4. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
-5. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
-6. **Evals:** medir a cada agente con casos y resultados esperados.
-7. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.
+1. **GitHub Actions:** la suite corre en cada push y a demanda, con el reporte como artefacto.
+2. **Supabase:** historial de corridas, autenticación y login.
+3. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
+4. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
+5. **Evals:** medir a cada agente con casos y resultados esperados.
+6. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.

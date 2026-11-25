@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: ninguna.** T6 en pausa por decisión del usuario (2026-11-19). Orden acordado: T15 → T16 → T17 → T5 → T18 → T6.
+**Siguiente: ninguna** (Fase 2 cerrada; sigue definir con el usuario la Fase 3). T6 en pausa por decisión del usuario (2026-11-19).
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -15,7 +15,7 @@ Cada herramienta se instala justo antes de la fase que la usa.
 | P3 | Repo en GitHub (público): https://github.com/jefferdaniel-dev/toolshop-qa-automation | agente con `gh`, previa confirmación | Fase 3 | `done` |
 | P4 | Cuenta Supabase + conector Supabase en Claude | usuario | Fase 4 | `pending` |
 | P5 | Cuenta Vercel/v0 + conectores Vercel y v0 en Claude | usuario | Fase 5 | `pending` |
-| P6 | Docker Desktop (requiere admin y WSL2) | usuario | Fase 2 | `pending` |
+| P6 | Docker Desktop 4.100.1 (WSL2, por usuario) | usuario | Fase 2 | `done` |
 | P7 | API key gratuita de Grok en `.env` (sin valor real en `.env.example`) | usuario | Fase 6 | `pending` |
 
 Ya disponible: Git, Node/npm, GitHub CLI con sesión iniciada (scopes `repo`, `workflow`).
@@ -160,9 +160,31 @@ Criterio de aceptación:
 - README: sección "Cómo se construyó" con un resumen corto (3–5 líneas) y enlace al documento; corregir lo que haya quedado desactualizado en esa sección.
 - Todo verificable contra `brain/log.md` y `brain/decisions.md`; nada inventado. Sin datos personales (nombre, correo), credenciales ni valores de `.env`. Diagrama en Mermaid (GitHub lo renderiza).
 
+## Fase 2 — Docker
+
+### T19 · Imagen Docker para correr las pruebas — `done`
+Pedido del usuario (2026-11-24); comportamiento confirmado con él antes de escribir el criterio.
+Criterio de aceptación:
+- `Dockerfile` sobre `python:3.15-slim` (D30) que instala `requirements.txt` y Chromium con sus dependencias del sistema. `requirements.txt` fija `playwright==1.65.2`, la versión ya instalada en `.venv`.
+- `.dockerignore` por lista permitida (todo excluido salvo lo que la imagen usa): `.env`, `recordings/`, `.git`, `.venv`, `evidencias/` y `reports/` nunca entran a la imagen.
+- Scripts npm `toolshop:docker:build` (construye) y `toolshop:docker` (corre sin pantalla con `--rm` y `--env-file .env`). Los filtros van después de `--`, por ejemplo `npm run toolshop:docker -- -m search`.
+- Sin argumentos no corre ninguna prueba: solo muestra los tags disponibles.
+- Al correr con filtro, el reporte y las capturas quedan en `reports/` y `evidencias/` de la carpeta del proyecto.
+- README: sección corta de Docker (requisito, construir, correr con filtro, aviso de que los valores de `.env` van sin comillas).
+- Sin cambios en las pruebas. Validación solo con `-m search -k "Combination and Pliers"` (sin login; pytest no acepta espacios sueltos en `-k`).
+
+### T20 · Cierre de observaciones de Docker — `done`
+Origen: observaciones de FURY y KAKASHI en T19. Comportamiento confirmado con el usuario (2026-11-24).
+Criterio de aceptación:
+- En el contenedor, sin `-m` ni `-k` no corre ninguna prueba aunque se pasen otras opciones (p. ej. `npm run toolshop:docker -- -v`): termina con error y un mensaje que dice cómo elegir. Basta uno de los dos filtros. Sin argumentos sigue listando los tags con código 0. Los comandos locales (`toolshop:all` y demás) no cambian.
+- Reportes y evidencias creados en el contenedor usan la hora de `America/Bogota` (`TZ` funciona en la imagen sin instalar `tzdata`, comprobado).
+- El hook `.claude/hooks/guard.py` bloquea, sin preguntar, los comandos de Docker que podrían mostrar la contraseña: opciones filtrantes de pytest (`-l`, `--showlocals`, `--tb=long`, `--full-trace`, `--tracing`) en `docker run ... toolshop-qa`; `--entrypoint env` o `printenv`; `docker inspect`; y `docker exec` con `env` o `printenv`. Siguen pasando `npm run toolshop:docker:build`, `npm run toolshop:docker -- -m search -k "..."`, y `docker images`, `ps`, `build` y `history`.
+- El hook se prueba pasándole comandos de ejemplo por stdin, sin ejecutarlos: primero los casos que hoy no bloquea, luego los mismos bloqueados. Editarlo pide la aprobación del usuario. Actualizar D25.
+- Validación: la corrida sin filtro, `-m search -k "Combination and Pliers"`, y una con solo `-k` usando `--collect-only`. Sin login ni compra.
+- README de Docker: ajustar la frase sobre correr sin argumentos.
+
 ## Fases siguientes (se detallan al cerrar la anterior)
 Orden acordado con el usuario (2026-11-19). Meta: un sistema todo en uno para lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
-- Fase 2: Docker — imagen reproducible para correr las pruebas local igual que en CI.
 - Fase 3: GitHub Actions — CI en push/PR + ejecución a demanda (`workflow_dispatch`), reporte como artefacto, revisando que no publique capturas sensibles.
 - Fase 4: Supabase — tabla de corridas; el workflow guarda resultados; autenticación y login.
 - Fase 5: Front en Vercel (Next.js) — diseño con Claude Design (D5), lanzar una prueba con pasos simples, dispara el workflow, historial, experiencia de espera (D6).
