@@ -12,6 +12,10 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 - **Locators estables.** Test-id (`data-test`), rol o texto; nada de XPath ni clases de estilo.
 - **Evidencia por paso.** Cada escenario guarda una captura por pantalla; la carpeta de una compra exitosa lleva el número de factura.
 - **Credenciales seguras.** El usuario de prueba sale de variables de entorno; la contraseña sale enmascarada en las capturas (el login lo comprueba antes de escribirla) y, si una prueba falla, la contraseña y el correo salen como `***` en la consola y en el reporte.
+- **Reporte legible.** Allure con pasos en Gherkin, capturas y colores Tokyo Night, en un HTML único que no hace conexiones externas.
+- **Reproducible en Docker.** La misma imagen, sin root y con la base fijada, para local y CI; sin filtro no corre nada.
+- **CI sin secretos (en revisión).** Workflow de GitHub Actions para cada push y pull request a `main`, y a demanda; nunca con login. La primera corrida en GitHub está en diagnóstico.
+- **Barreras de seguridad para agentes de IA.** Un hook revisa cada comando, y si se rompe solo deja leer y repararlo.
 - **Hallazgos documentados.** La suite encontró tres comportamientos del sitio que vale la pena reportar (ver más abajo).
 
 ## Stack
@@ -24,6 +28,7 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 | python-dotenv | Configuración desde `.env` |
 | Allure 3 + allure-pytest-bdd | Reporte HTML con pasos en Gherkin, capturas y colores Tokyo Night |
 | Docker | Imagen para correr las pruebas sin navegador visible |
+| GitHub Actions | CI y ejecución a demanda, con el reporte como artefacto |
 | npm | Lanzador de comandos cortos y fuente de Allure (única dependencia) |
 
 ## Estructura
@@ -36,6 +41,9 @@ tests/
 ├─ data/            # Compradores sintéticos y tarjetas de prueba
 └─ conftest.py      # URL base, idioma del navegador, evidencias
 scripts/            # report.py y tokyo-night.css: arman el reporte HTML
+Dockerfile          # Imagen de las pruebas
+.github/workflows/  # pruebas.yml: CI y ejecución a demanda
+docs/               # Cómo se construyó con IA
 brain/              # Backlog, decisiones y bitácora del proyecto
 .claude/            # Agentes, orquestador y reglas de seguridad (ver "Cómo se construyó")
 ```
@@ -183,19 +191,18 @@ Aviso: este repositorio es público. Los artefactos los puede descargar cualquie
 
 La IA implementa, propone y revisa; yo decido qué se construye, detecto cuándo algo no es lo que quería y convierto los errores que se pueden repetir en reglas. La arquitectura de agentes viene de mi experiencia laboral y de estudiar distintos diseños de agentes, y sigue en evolución: faltan evals que midan a cada agente, skills y una evaluación cíclica para mejorarlos. La idea de las banderas `acceso` y `etapa` en los Ejemplos también es mía.
 
-El flujo trabaja una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero, cuatro validadores revisan en paralelo (**ROCK LEE** corre solo el escenario tocado, **SHIKAMARU** el alcance, **FURY** la seguridad, **KAKASHI** las buenas prácticas) y, si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces).
+El flujo trabaja una tarea a la vez: **HIRUZEN** (`/hiruzen`) orquesta, **PICCOLO** implementa con test primero y validan **ROCK LEE** (corre solo lo tocado), **SHIKAMARU** (alcance), **FURY** (seguridad) y **KAKASHI** (buenas prácticas). La ronda completa es para lo que toca seguridad, Docker, CI o algo público; el resto pasa por menos agentes. Si alguno falla, **JUEZ** dictamina si la culpa es de la prueba, del producto o del entorno antes de reintentar (máximo dos veces). Cada agente tiene su modelo según el riesgo de lo que hace.
 
 La memoria vive en `brain/` (backlog con criterios, decisiones con su porqué y bitácora), las reglas en `CLAUDE.md`, y un hook (`.claude/hooks/guard.py` lanza las reglas de `guard_rules.py`) bloquea acciones riesgosas y pide aprobación antes de publicar en GitHub; si las reglas no cargan, solo deja leer y buscar, y reparar `guard_rules.py` con aprobación.
 
-En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con un diagrama, las reglas y su porqué, cifras sacadas de `brain/` y ocho problemas reales: cómo se detectaron, cómo se resolvieron y qué aporté yo en cada uno.
+En [docs/proceso-con-ia.md](docs/proceso-con-ia.md) cuento el flujo con diagramas, los modelos de cada agente, las barreras de seguridad, las reglas y su porqué, cifras sacadas de `brain/` y doce problemas reales: cómo se detectaron, cómo se resolvieron y qué aporté yo en cada uno.
 
 ## Próximas fases
 
 La meta es un sistema todo en uno: lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
 
-1. **GitHub Actions:** la suite corre en cada push y a demanda, con el reporte como artefacto.
-2. **Supabase:** historial de corridas, autenticación y login.
-3. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
-4. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
-5. **Evals:** medir a cada agente con casos y resultados esperados.
-6. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.
+1. **Supabase:** historial de corridas, autenticación y login.
+2. **Front en Vercel:** lanzar una prueba con pasos simples y ver el resultado de forma clara.
+3. **Agente con LangGraph:** con la API gratuita de Grok, lanza la prueba e interpreta el resultado.
+4. **Evals:** medir a cada agente con casos y resultados esperados.
+5. **Skills y mejora cíclica:** convertir partes del flujo en skills y volver a correr los evals para mejorarlos.

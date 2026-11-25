@@ -309,3 +309,13 @@
 - FURY, SHIKAMARU y KAKASHI PASS. FURY probó 247.000 expresiones con el evaluador de pytest: 0 seleccionan una fila con login (reportado por FURY). Corregida la frase del README sobre las capturas.
 - ROCK LEE dio FAIL porque el reporte de la corrida de 4 pruebas estaba vacío. Causa: Git Bash convierte `-v ./reports:/app/reports` en una ruta de Windows y el montaje se rompe (dejó una carpeta `reports;C`, vacía y borrada). Con `MSYS_NO_PATHCONV=1` el orquestador obtuvo 4 passed, 4 resultados y 10 capturas con uid 54321. No es defecto del producto ni de la prueba.
 - Pendiente: commit, push, pull request y primera corrida real en `ubuntu-24.04`. Observaciones de FURY sin corregir: `--cap-drop ALL`/`no-new-privileges`, `always()` frente a `!cancelled()`, grupo de concurrencia por evento, aprobación de forks y `sha_pinning_required`.
+
+## 2026-11-25 · T23 publicada; primera corrida en rojo
+- Commit `7739c33`, push de `fase-2-docker` y PR 1 a `main`, con aprobación del usuario (GitHub estuvo degradado y el PR se creó al tercer intento).
+- Primera corrida en `ubuntu-24.04`: imagen, reporte y artefacto bien; las 4 pruebas fallan al abrir la home esperando `QUERY /products` (30 s). La misma imagen con uid 1001 pasa desde el equipo del usuario. Causa sin confirmar; se sospecha del entorno. Sin reintentos como parche.
+
+## 2026-11-25 · T24 documentación del proceso
+- Pedido del usuario: actualizar `docs/proceso-con-ia.md` (diagrama, modelos por agente, barreras de seguridad, cifras T1–T22, casos 9–12) y el README. Se corrigió la afirmación de que los revisores solo pueden leer: FURY y JUEZ corrieron sondas propias pese a las herramientas declaradas.
+- Aportes del usuario que no habían quedado escritos: instaló Docker él mismo con una sesión guía (P6); eligió que las credenciales llegaran solo al correr y que sin filtro no corriera nada (T19); notó que el reporte no mostraba nada y pidió estadísticas y capturas (T21); preguntó cómo evitar que el agente quedara sin herramientas si el hook se rompía (T22); preguntó por qué había tantas aprobaciones y si reducir revisiones subía el riesgo (validación proporcional).
+- Precisiones de origen: FURY reportó los archivos falsos en una copia (T19) y el error de sintaxis del hook (al revisar T20, defecto anterior a T20); JUEZ listó la imagen con contenedores efímeros (T19) e hizo un cálculo en memoria (T22).
+- SHIKAMARU FAIL en T24: cifras, modelos, citas y diagramas correctos; faltaba respaldo en la bitácora para varios aportes y el README daba por logrado el CI. Corregido por el orquestador.

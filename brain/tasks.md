@@ -231,6 +231,13 @@ Criterio de aceptación:
 - README: cómo se ve y se lanza, y el aviso de que los artefactos de un repo público los puede bajar cualquiera con cuenta. D4, D30 y lo que cambie en decisiones.
 - Validación local: `-m search -k "Combination and Pliers"` en local y Docker, y el comando automático en Docker con el mismo usuario no root (4 pruebas, sin login); el workflow se valida con un linter de Actions si está disponible sin instalar nada, y si no, por lectura. La corrida real en GitHub se hace al publicar, con aprobación del usuario (push y PR).
 
+### T24 · Documentación del proceso con IA y README — `in_progress`
+Pedido del usuario (2026-11-25): actualizar `docs/proceso-con-ia.md` y la información del repositorio.
+Criterio de aceptación:
+- `docs/proceso-con-ia.md`: diagrama del flujo al día con el modelo de cada agente y la validación proporcional, diagrama y tabla de barreras de seguridad con sus límites, cifras al cierre de T22 y casos nuevos; todo verificable en `brain/`.
+- `README.md`: qué demuestra, stack, estructura, próximas fases y resumen del flujo.
+- Descripción y temas del repositorio en GitHub, con aprobación del usuario.
+
 ## Fases siguientes (se detallan al cerrar la anterior)
 Orden acordado con el usuario (2026-11-19). Meta: un sistema todo en uno para lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.
 - Fase 4: Supabase — tabla de corridas; el workflow guarda resultados; autenticación y login.
