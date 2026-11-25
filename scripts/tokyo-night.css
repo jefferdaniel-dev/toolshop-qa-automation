@@ -1,0 +1,17 @@
+:root:root:root[data-theme="dark"] {
+  --color-bg-canvas: #1a1b26; --color-bg-primary: #24283b; --color-bg-secondary: #1a1b26; --color-bg-raised: #24283b;
+  --color-text-primary: #c0caf5; --color-text-secondary: #a9b1d6; --color-text-muted: #9aa5ce;
+  --color-icon-primary: #c0caf5; --color-icon-secondary: #9aa5ce; --color-icon-muted: #9aa5ce;
+  --color-border-subtle: #414868; --color-border-default: #414868; --color-border-medium: #565f89; --color-border-control: #565f89;
+  --color-focus-ring: #7aa2f7; --color-link-text: #7dcfff; --color-link-text-hover: #7dcfff; --color-link-text-active: #7dcfff;
+  --color-nav-item-text-active: #bb9af7; --color-nav-item-icon-active: #bb9af7; --color-sorter-fg-active: #bb9af7;
+  --color-intent-primary-bg: #7aa2f7; --color-intent-primary-bg-hover: #7dcfff; --color-intent-primary-bg-active: #7dcfff;
+  --color-intent-primary-text: #7aa2f7; --color-intent-primary-on-bg: #1a1b26;
+  --color-intent-danger-text: #f7768e; --color-intent-danger-border: #f7768e; --color-intent-danger-bg: #f7768e; --color-intent-danger-on-bg: #1a1b26;
+  --color-intent-success-text: #9ece6a; --color-intent-success-border: #9ece6a; --color-intent-success-bg: #9ece6a; --color-intent-success-on-bg: #1a1b26;
+  --color-intent-warning-text: #e0af68; --color-intent-warning-border: #e0af68; --color-intent-warning-bg: #e0af68; --color-intent-warning-on-bg: #1a1b26;
+  --color-status-passed-bg: #9ece6a; --color-status-passed-text: #9ece6a; --color-status-passed-border: #9ece6a; --color-status-passed-on-bg: #1a1b26; --color-status-passed-chart: #9ece6a; --color-status-passed-chart-fill: #9ece6a;
+  --color-status-failed-bg: #f7768e; --color-status-failed-text: #f7768e; --color-status-failed-border: #f7768e; --color-status-failed-on-bg: #1a1b26; --color-status-failed-chart: #f7768e; --color-status-failed-chart-fill: #f7768e;
+  --color-status-broken-bg: #e0af68; --color-status-broken-text: #e0af68; --color-status-broken-border: #e0af68; --color-status-broken-on-bg: #1a1b26; --color-status-broken-chart: #e0af68; --color-status-broken-chart-fill: #e0af68;
+  --color-syntax-string: #9ece6a; --color-syntax-keyword: #bb9af7; --color-syntax-number: #ff9e64; --color-syntax-function: #7aa2f7;
+}

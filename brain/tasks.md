@@ -3,7 +3,7 @@
 Estados: `pending` · `in_progress` · `blocked` · `done`
 Responsable: **usuario** (requiere tu cuenta, instalación con admin o datos privados) · **agente** (vía `/hiruzen`).
 
-**Siguiente: ninguna** (Fase 2 cerrada; sigue definir con el usuario la Fase 3). T6 en pausa por decisión del usuario (2026-11-19).
+**Siguiente: T22.** Después, Fase 3. T6 en pausa por decisión del usuario (2026-11-19).
 
 ## Fase 0 — Preparación del entorno
 Cada herramienta se instala justo antes de la fase que la usa.
@@ -182,6 +182,36 @@ Criterio de aceptación:
 - El hook se prueba pasándole comandos de ejemplo por stdin, sin ejecutarlos: primero los casos que hoy no bloquea, luego los mismos bloqueados. Editarlo pide la aprobación del usuario. Actualizar D25.
 - Validación: la corrida sin filtro, `-m search -k "Combination and Pliers"`, y una con solo `-k` usando `--collect-only`. Sin login ni compra.
 - README de Docker: ajustar la frase sobre correr sin argumentos.
+
+### T21 · Reporte Allure en lugar de pytest-html — `done`
+Pedido del usuario (2026-11-24): el reporte actual sale vacío y sin capturas. Causa confirmada: pytest-html 4.2.0 falla al abrirse desde una ruta con tilde (`pushState` con `unescape`). Comportamiento confirmado con el usuario. Reemplaza el reporte de T5.
+Criterio de aceptación:
+- `allure-pytest-bdd` fijado en `requirements.txt` y Allure 3 fijado en `package.json`; se quitan `pytest-html`, su opción en `pytest.ini` y el código que solo servía para él. Se mantiene la captura en fallos en `test-results/`.
+- Cada escenario, pase o falle, muestra en el reporte sus pasos en Gherkin con las capturas de `evidencias/` adjuntas en el paso que las tomó. En un fallo se adjunta también la captura del momento.
+- El reporte no muestra los argumentos de los pasos (fixtures), para que una clave pasada como dato no se filtre; sí la fila de `Ejemplos`. Tampoco el nombre del equipo, ni en claro ni codificado.
+- La corrida (local y Docker) deja los resultados en una carpeta propia dentro de `reports/`, sin sobrescribir las anteriores y con el nombre de hoy (`<YYYY-MM-DD_HH-MM-SS>_<selección>`). `npm run toolshop:report`, en el PC, arma un HTML único y en español de la última corrida. La imagen Docker no lleva Node.
+- El HTML abre bien con doble clic desde la ruta del proyecto (tiene tilde y espacios), verificado sin errores de JavaScript.
+- El reporte usa los colores de Tokyo Night (variante Night, paleta publicada en `tokyo-night/tokyo-night-vscode-theme`) en fondo, texto, bordes, enlaces y estados (aprobado, fallido, roto), y abre siempre así aunque el sistema esté en modo claro. Los colores viven en un archivo CSS propio.
+- Prueba de fuga: con una clave inventada en memoria y un fallo forzado (sin tocar login real), no aparece en resultados ni en el HTML.
+- Los filtros del contenedor y las opciones bloqueadas por el hook siguen igual. Actualizar D24, D29 y README (stack, reporte, comandos, Docker).
+- Validación: `-m search -k "Combination and Pliers"` en local y en Docker, más la sonda de fuga. Sin login ni compra.
+
+### T22 · Cerrar fugas fuera del reporte y endurecer el hook — `pending`
+Origen: observaciones de FURY y JUEZ en T20 y T21. Comportamiento confirmado con el usuario (2026-11-25).
+Criterio de aceptación:
+- Al fallar una prueba, los valores de `TEST_USER_PASSWORD` y `TEST_USER_EMAIL` salen como `***` en la consola de pytest y en los textos del reporte (mensajes, trazas y adjuntos de texto), en todas sus formas escapadas. El correo sigue visible en la captura `login` (D23). Variable ausente, vacía o solo espacios: sin cambios ni error.
+- En el reporte, la ruta local del proyecto no aparece en mensajes ni trazas (queda relativa). En la consola no cambia.
+- El login comprueba que el campo es `type=password` antes de escribir la clave.
+- El hook bloquea, sin preguntar, en comandos de pytest, `toolshop:` y `docker run ... toolshop-qa`: `--tb` con cualquier valor que no sea `short`, `line`, `native` o `no` si la sonda demuestra que no filtran, `-o`/`--override-ini` con `addopts`, `-c`/`--config-file`, `--confcutdir`, `--noconftest` y `DEBUG=pw:*` (también con `$env:`, `export` y `docker -e`). No debe bloquear `-k`, `-m`, `--collect-only`, `--headed`, `-v`, `--lf`, `-x` ni los scripts npm.
+- Hook roto, sin dejar al agente encerrado (acordado con el usuario, 2026-11-25):
+  - Prevención: una edición con Edit o Write que deje `guard.py` (o el lanzador) con error de sintaxis se niega, comprobando el contenido resultante antes de guardar. El archivo vigente no cambia.
+  - Modo degradado: un lanzador pequeño arranca `guard.py`; si no puede, se permite leer y buscar (salvo `.env`), editar solo `guard.py` pide aprobación, y todo lo demás (comandos y otras ediciones) se niega con un mensaje que dice la causa y cómo repararlo (`git restore .claude/hooks/guard.py` en la terminal del usuario).
+  - Antes de construirlo, comprobar cómo trata Claude Code cada código de salida del hook y si `ask` llega a mostrarse en modo automático; si no se muestra, editar `guard.py` en modo degradado también se niega. La comprobación no puede dejar el hook real roto: se hace con copias o por stdin.
+  - Límite aceptado: si falta `py -3.15` o se rompe el propio lanzador, repara el usuario.
+  - Tocar `.claude/` pide la aprobación del usuario.
+- El hook se prueba por stdin, sin ejecutar los comandos de ejemplo: primero los casos que hoy pasan, luego los mismos bloqueados; las tablas de T20 siguen con 0 desajustes y ninguna decisión se debilita frente a `HEAD`.
+- Sondas con claves y correos inventados en una copia aislada, sin login real, buscando en la consola, los resultados, los adjuntos y el HTML con base64 decodificado.
+- Actualizar D23, D25, D29 y README. Validación real: solo `-m search -k "Combination and Pliers"` en local y Docker.
 
 ## Fases siguientes (se detallan al cerrar la anterior)
 Orden acordado con el usuario (2026-11-19). Meta: un sistema todo en uno para lanzar pruebas desde la web y recibir el resultado explicado de forma amigable.

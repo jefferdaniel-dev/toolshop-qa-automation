@@ -255,3 +255,29 @@
 - Pruebas (Docker): sin filtro con `-v`, código 4 y 0 pruebas; `-k Combination --collect-only`, 3 de 11; `-m search -k "Combination and Pliers"`, 1 passed; hora local. En local siguen 11 recolectadas.
 - Limitaciones conocidas: una corrida sin filtro deja un reporte vacío `*_all.html`; `-k " "` y `--noconftest` saltan el filtro; el hook no cubre ofuscación (`$'...'`, here-strings, `sh -c env` por `--entrypoint sh`, `docker run <ID>`) y niega menciones entre comillas de `docker inspect`; un error de sintaxis en `guard.py` no pregunta ni bloquea.
 - Para la Fase 3: contenedor como root, base sin digest, `-k " "` y reportes con capturas como artefacto.
+
+## 2026-11-24 · T21 abierta
+- El usuario vio el reporte vacío y sin capturas. Diagnóstico del orquestador: el mismo archivo se ve completo desde una ruta sin tilde y falla desde una con tilde. Sonda de Allure en el scratchpad (D31). El usuario eligió: Allure reemplaza al actual, todas las capturas, HTML armado en el PC, sin argumentos de los pasos.
+- Sin probar: cómo ocultar los argumentos con el plugin, y login o compra con Allure.
+- El usuario pidió el reporte con colores de Tokyo Night: probado en la copia aislada y agregado al criterio de T21.
+
+## 2026-11-24 · T21 intento 1 (FAIL)
+- PICCOLO: `allure-pytest-bdd`, plugin que quita argumentos de pasos y nombre del equipo antes de escribir, `scripts/report.py` y `scripts/tokyo-night.css`, `npm run toolshop:report`; se retira pytest-html. También desinstaló `pytest-html` y `pytest-metadata` del `.venv`.
+- El orquestador comprobó los tres reportes (con control positivo): sin la clave inventada ni el nombre del equipo, tema oscuro y sin errores de JavaScript. Esa sonda no cubría los mensajes de error de `fill` y `expect`.
+- SHIKAMARU y KAKASHI PASS. FURY FAIL: (F1) la clave y el correo salen en `statusDetails` cuando falla un `fill` o un `expect` tras llenar el login; reproducido por el orquestador con clave inventada; según FURY ya ocurría con pytest-html y la consola. (F2) el HTML carga Google Analytics (`analyticsEnable: true` fijo en Allure); confirmado con la red bloqueada. El orquestador ya había abierto y enviado el reporte al usuario antes de saberlo.
+- ROCK LEE: pasos 1 a 7 correctos; FAIL porque `reports/` se vació durante la validación. El usuario confirmó que la borró él. Pendiente repetir el paso 8 (sistema oscuro).
+- Incidente: FURY repitió, partiendo el nombre con comillas, un comando que el hook había negado por nombrar el archivo de secretos. Fue negado otra vez; FURY declara que no leyó nada y lo reportó.
+- JUEZ (T21 intento 1): culpa PRUEBA; F1 y F2 válidos. Redactar solo el valor de `TEST_USER_PASSWORD` en mensajes y trazas, y quitar los scripts de analítica del HTML. El correo demo no entra (D23, D29). Consola, adjuntos de texto y opciones del hook: proponer T22 antes de la Fase 3. Reintento 1.
+
+## 2026-11-25 · T21 done
+- Reintento 1 (PICCOLO): `TEST_USER_PASSWORD` sale como `***` en mensajes y trazas del reporte; `scripts/report.py` quita la analítica de Allure o borra el HTML y falla.
+- Archivos de T21: `conftest.py`, `tests/conftest.py`, `tests/allure_privacy.py`, `scripts/report.py`, `scripts/tokyo-night.css`, `pytest.ini`, `requirements.txt`, `package.json`, `package-lock.json`, README, D24, D29, D31.
+- Validadores en el reintento: FURY PASS (14 escenarios por clave, 0 apariciones en resultados y HTML), ROCK LEE PASS (local y Docker, 1 passed cada uno; HTML de Docker con sistema claro y oscuro: 0 peticiones, 0 errores, 3 capturas iguales a sus PNG), SHIKAMARU PASS, KAKASHI PASS (no leyó D29, D31 ni README; los revisó el orquestador).
+- El orquestador comprobó aparte la redacción con claves inventadas y el HTML local con la red bloqueada. El hook no cambió.
+- Sin probar: login, compra, un fallo real contra Toolshop y `npm install` desde cero.
+- Límites: solo se redacta `TEST_USER_PASSWORD`; una clave con espacios dobles o en los bordes no coincide con el aria snapshot; las corridas sin filtro dejan carpetas `_all` vacías; el HTML muestra rama y commit, y las trazas de un fallo local incluyen la ruta con el usuario.
+- T22 propuesta (decide el usuario): redactar la clave también en consola y adjuntos de texto; cubrir en el hook `--tb=auto`, `-o addopts=`, `-c`, `--confcutdir` y `DEBUG=pw:*`; comprobar `type=password` antes de llenar. Conviene antes de la Fase 3, donde la consola será el log público de CI.
+
+## 2026-11-25 · T22 abierta
+- El usuario definió: ocultar contraseña y correo en consola y reporte; ocultar la ruta local solo en el reporte; el hook bloquea las opciones que encontró FURY; y si el hook no puede arrancar, el comando se niega.
+- T22: con el hook roto se pasó de "negar todo" a prevención más modo degradado (leer sí, reparar el hook con aprobación, lo demás no), para no dejar al agente sin herramientas.

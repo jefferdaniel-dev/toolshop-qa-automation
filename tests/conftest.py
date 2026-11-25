@@ -1,13 +1,12 @@
-import base64
 import os
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
+import allure
 import pytest
 from dotenv import load_dotenv
 from playwright.sync_api import Page
-from pytest_html import extras
 
 from tests.naming import slug
 
@@ -63,9 +62,12 @@ class Evidence:
     def capture(self, module: str):
         self.count += 1
         self.folder.mkdir(parents=True, exist_ok=True)
-        self.page.screenshot(
-            path=self.folder / f"{self.count:02d}-{module}.png",
-            full_page=True,
+        shot = self.folder / f"{self.count:02d}-{module}.png"
+        self.page.screenshot(path=shot, full_page=True)
+        allure.attach.file(
+            shot,
+            name=f"{self.count:02d}-{module}",
+            attachment_type=allure.attachment_type.PNG,
         )
 
     def append_to_folder(self, suffix: str):
@@ -111,7 +113,7 @@ def page(page: Page, request) -> Page:
 
 # A hook is used instead of pytest-playwright's --screenshot only-on-failure:
 # that option captures when the context closes, after the report of the call
-# phase, so the image could not be embedded in the HTML report.
+# phase, so the image could not be attached to the failed step.
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
@@ -121,6 +123,7 @@ def pytest_runtest_makereport(item, call):
         return
     FAILURE_SHOTS.mkdir(exist_ok=True)
     path = FAILURE_SHOTS / f"{slug(item.name)}.png"
-    image = page.screenshot(path=path, full_page=True)
-    encoded = base64.b64encode(image).decode()
-    report.extras = [*getattr(report, "extras", []), extras.png(encoded)]
+    page.screenshot(path=path, full_page=True)
+    allure.attach.file(
+        path, name="fallo", attachment_type=allure.attachment_type.PNG
+    )

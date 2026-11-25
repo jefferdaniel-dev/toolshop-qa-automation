@@ -22,8 +22,9 @@ Los escenarios están escritos en Gherkin en español, para que los lea negocio,
 | Playwright 1.65 | Navegador (Chromium) |
 | pytest 9 + pytest-bdd 9 | Runner y Gherkin |
 | python-dotenv | Configuración desde `.env` |
+| Allure 3 + allure-pytest-bdd | Reporte HTML con pasos en Gherkin, capturas y colores Tokyo Night |
 | Docker | Imagen para correr las pruebas sin navegador visible |
-| npm | Solo como lanzador de comandos cortos, sin dependencias |
+| npm | Lanzador de comandos cortos y fuente de Allure (única dependencia) |
 
 ## Estructura
 
@@ -34,6 +35,7 @@ tests/
 ├─ pages/           # Page Objects: home, resultados, producto, carrito, login, checkout
 ├─ data/            # Compradores sintéticos y tarjetas de prueba
 └─ conftest.py      # URL base, idioma del navegador, evidencias
+scripts/            # report.py y tokyo-night.css: arman el reporte HTML
 brain/              # Backlog, decisiones y bitácora del proyecto
 .claude/            # Agentes, orquestador y reglas de seguridad (ver "Cómo se construyó")
 ```
@@ -113,7 +115,13 @@ Si una compra no llega a la factura, la carpeta queda sin el sufijo `INV-…`: s
 
 ## Reporte
 
-Cada corrida deja su propio reporte `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>.html` (autocontenido, se abre con doble clic; `<selección>` sale de `-m` y `-k`, o es `all`; no se sobrescriben). Si un escenario falla, la captura de la pantalla en ese momento queda incrustada en el reporte y en `test-results/`. No se guarda trace ni video. Ambas carpetas están fuera de git.
+Cada corrida deja sus resultados en `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>/resultados` (`<selección>` sale de `-m` y `-k`, o es `all`; no se sobrescriben). Para verlos:
+
+```
+npm run toolshop:report
+```
+
+Arma, en el PC, un HTML único y en español de la última corrida en `reports/<corrida>/informe/index.html`, que se abre con doble clic. Cada escenario muestra sus pasos en Gherkin con las capturas adjuntas al paso que las tomó, y la fila de `Ejemplos`; si falla, también la captura del momento (que además queda en `test-results/`). El reporte no muestra los argumentos de los pasos ni el nombre del equipo, y reemplaza por `***` el valor de `TEST_USER_PASSWORD` en los mensajes de error (una clave que no esté en esa variable no se redacta ahí). Tampoco hace peticiones a internet: se le quita la analítica de Google que Allure incluye. Usa los colores de Tokyo Night (`scripts/tokyo-night.css`) y abre siempre oscuro, aunque el sistema esté en modo claro. No se guarda trace ni video. `reports/` y `test-results/` están fuera de git.
 
 ## Hallazgos de QA en Toolshop
 
@@ -123,13 +131,14 @@ Cada corrida deja su propio reporte `reports/<YYYY-MM-DD_HH-MM-SS>_<selección>.
 
 ## Cómo correrlo
 
-Requisitos: Windows, Python 3.15 y Node/npm. Los comandos de `npm` usan la ruta `.venv\Scripts\python`, propia de Windows.
+Requisitos: Windows, Python 3.15 y Node/npm (Node arma el reporte). Los comandos de `npm` usan la ruta `.venv\Scripts\python`, propia de Windows.
 
 ```
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python -m playwright install chromium
 copy .env.example .env
+npm install
 ```
 
 Completa `.env` con `BASE_URL=https://practicesoftwaretesting.com` y un usuario de prueba de Toolshop en `TEST_USER_EMAIL` y `TEST_USER_PASSWORD`. `.env` no se versiona.
@@ -145,6 +154,7 @@ Todos estos comandos abren el navegador visible:
 | `npm run toolshop:confirmacion` | Filas con `etapa` confirmacion (pagan y obtienen factura) |
 | `npm run toolshop:invitado` | Filas como invitado (incluye la celda de acceso vacía) |
 | `npm run toolshop:login` | Filas con usuario registrado (`login_checkout` y `login_home`) |
+| `npm run toolshop:report` | No corre pruebas: arma el HTML de la última corrida (ver Reporte) |
 
 Filtros extra de pytest van después de `--`, por ejemplo `npm run toolshop:confirmacion -- -k "Thor"`. Sin navegador visible: `.venv\Scripts\python -m pytest`.
 
@@ -157,7 +167,7 @@ npm run toolshop:docker:build
 npm run toolshop:docker -- -m search -k "Combination and Pliers"
 ```
 
-Corre sin pantalla y deja el reporte y las capturas en `reports/` y `evidencias/` del proyecto. Sin argumentos no corre pruebas: solo lista los tags. Con otras opciones pero sin `-m` ni `-k` (por ejemplo solo `-v`) termina con error pidiendo elegir; con uno de los dos basta. Reportes y evidencias usan la hora de Bogotá. Con varias palabras en `-k` hay que unirlas con `and`.
+Corre sin pantalla y deja los resultados y las capturas en `reports/` y `evidencias/` del proyecto; la imagen no lleva Node, así que el HTML se arma después en el PC con `npm run toolshop:report`. Sin argumentos no corre pruebas: solo lista los tags. Con otras opciones pero sin `-m` ni `-k` (por ejemplo solo `-v`) termina con error pidiendo elegir; con uno de los dos basta. Reportes y evidencias usan la hora de Bogotá. Con varias palabras en `-k` hay que unirlas con `and`.
 
 ## Cómo se construyó
 
